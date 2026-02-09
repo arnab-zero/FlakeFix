@@ -82,13 +82,13 @@ siamese_network.eval()
 embedding_cache_path = "train_embeddings.pt"
 
 if os.path.exists(embedding_cache_path):
-    print("\n✅ Loading cached training embeddings...")
+    print("\nLoading cached training embeddings...")
     saved = torch.load(embedding_cache_path, map_location=device)
     post_train_embed = saved['embeddings']
     post_train_label = saved['labels']
-    print(f"Loaded {len(post_train_embed)} training embeddings from cache")
+    print(f"\nLoaded {len(post_train_embed)} training embeddings from cache")
 else:
-    print("\n⚙️ Generating embeddings from training set (this may take a while)...")
+    print("\nGenerating embeddings from training set (this may take a while)...")
     post_train_embed = []
     post_train_label = []
     with torch.no_grad():
@@ -98,7 +98,7 @@ else:
     
     # 🔥 CHANGED: Save the embeddings after generation
     torch.save({'embeddings': post_train_embed, 'labels': post_train_label}, embedding_cache_path)
-    print(f"✅ Training embeddings cached at '{embedding_cache_path}'")
+    print(f"\nTraining embeddings cached at '{embedding_cache_path}'")
 
 # === 🔥 NEW: Function to preprocess code snippet ===
 def preprocess_code_snippet(code_snippet):
@@ -116,19 +116,28 @@ def preprocess_code_snippet(code_snippet):
     if len(train_dataset) > 0:
         sample_item = train_dataset[0]
         sample_shape = sample_item['anchor'].shape
-        print(f"Debug: Training data shape = {sample_shape}, m_len = {m_len}")
+        print(f"\nDebug: Training data shape = {sample_shape}, m_len = {m_len}")
     
     # 🔥 FIXED: Use the same tokenization approach as the dataset
     # Tokenize with proper length handling for CodeBERT (max 512 tokens)
-    encoded = tokenizer.encode_plus(
+    encoded = tokenizer(
         code_snippet,
         add_special_tokens=True,
-        max_length=512,  # CodeBERT's maximum sequence length
-        padding='max_length',
+        max_length=512,
+        padding="max_length",
         truncation=True,
-        return_tensors='pt'
+        return_tensors="pt",
     )
+    # encoded = tokenizer.encode_plus(
+    #     code_snippet,
+    #     add_special_tokens=True,
+    #     max_length=512,  # CodeBERT's maximum sequence length
+    #     padding='max_length',
+    #     truncation=True,
+    #     return_tensors='pt'
+    # )
     
+
     # Get CodeBERT embedding
     with torch.no_grad():
         input_ids = encoded['input_ids'].to(device)
@@ -180,7 +189,7 @@ def detect_flaky_test(code_snippet):
     Returns:
         dict: Contains 'is_flaky', 'category', and 'confidence' information
     """
-    print("\n🔍 Analyzing code snippet...")
+    print("\nAnalyzing code snippet...")
     
     # Preprocess the code snippet
     input_embedding = preprocess_code_snippet(code_snippet)
@@ -224,7 +233,7 @@ def interactive_detection():
     Provides an interactive interface for detecting flaky tests from code snippets.
     """
     print("\n" + "="*70)
-    print("🔬 FLAKY TEST DETECTION SYSTEM")
+    print("FLAKY TEST DETECTION SYSTEM")
     print("="*70)
     print("\nEnter your code snippet (type 'END' on a new line when finished):")
     print("Type 'QUIT' to exit the system.\n")
@@ -237,7 +246,7 @@ def interactive_detection():
             if line.strip() == 'END':
                 break
             if line.strip() == 'QUIT':
-                print("\n👋 Exiting detection system...")
+                print("\n Exiting detection system...")
                 return
             lines.append(line)
         
@@ -251,7 +260,7 @@ def interactive_detection():
         
         # Display results
         print("\n" + "-"*70)
-        print("📊 DETECTION RESULTS")
+        print("DETECTION RESULTS")
         print("-"*70)
         print(f"Is Flaky: {'⚠️  YES' if result['is_flaky'] else '✅ NO'}")
         print(f"Category: {result['category'].upper()}")
@@ -267,7 +276,7 @@ def evaluate_on_validation_set():
     """
     Evaluates the model on the validation set.
     """
-    print("\n📈 Evaluating on validation set...")
+    print("\nEvaluating on validation set...")
     predicted_labels = []
     true_labels = []
 
@@ -290,7 +299,7 @@ def evaluate_on_validation_set():
 if __name__ == "__main__":
     # 🔥 NEW: Debug section to understand the data format
     print("\n" + "="*70)
-    print("🔍 INSPECTING TRAINING DATA FORMAT")
+    print("INSPECTING TRAINING DATA FORMAT")
     print("="*70)
     if len(train_dataset) > 0:
         sample = train_dataset[0]
@@ -328,7 +337,7 @@ if __name__ == "__main__":
     }
     """
     
-    print("\n📝 Example Detection:")
+    print("\nExample Detection:")
     result = detect_flaky_test(example_code)
     print(f"Result: {result}")
     
