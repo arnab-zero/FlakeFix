@@ -1,0 +1,134 @@
+{
+  "inlined": [
+    {
+      "strategy": "wrapper_return",
+      "callee": "org.platformlambda.core.models.EventBlocks.size",
+      "replaced": "result.size()",
+      "replacement": "buffer.size()"
+    },
+    {
+      "strategy": "wrapper_void",
+      "callee": "org.platformlambda.core.system.Platform.registerPrivate",
+      "replaced": "platform.registerPrivate(t, f, 1);",
+      "replacement": "platform.register((t), (f), true, (1));"
+    },
+    {
+      "strategy": "wrapper_return",
+      "callee": "org.platformlambda.core.system.Platform.waitForProvider",
+      "replaced": "platform.waitForProvider(\"v1.hello.world\", 5)",
+      "replacement": "platform.waitForProviders(Collections.singletonList((\"v1.hello.world\")), (5))"
+    },
+    {
+      "strategy": "wrapper_void",
+      "callee": "org.platformlambda.core.models.EventBlocks.put",
+      "replaced": "result.put(myRoute, input);",
+      "replacement": "buffer.put((myRoute), (input));"
+    }
+  ],
+  "skipped": [
+    {
+      "callee": "org.platformlambda.core.system.EventEmitter.getInstance",
+      "call": "getInstance/0",
+      "qualifier": "EventEmitter",
+      "reason": "unsafe_wrapper_private_state",
+      "detail": "wrapper_expr_contains_private_state_tokens",
+      "wrapper_expr": "INSTANCE"
+    },
+    {
+      "call": "get/1",
+      "qualifier": "headers",
+      "reason": "library_or_unindexed",
+      "detail": "no_candidates"
+    },
+    {
+      "call": "incrementAndGet/0",
+      "qualifier": "counter",
+      "reason": "library_or_unindexed",
+      "detail": "no_candidates"
+    },
+    {
+      "call": "offer/1",
+      "qualifier": "completion",
+      "reason": "library_or_unindexed",
+      "detail": "no_candidates"
+    },
+    {
+      "callee": "org.platformlambda.core.system.Platform.getInstance",
+      "reason": "private_state_tokens_in_body"
+    },
+    {
+      "call": "onSuccess/1",
+      "qualifier": null,
+      "reason": "library_or_unindexed",
+      "detail": "no_candidates"
+    },
+    {
+      "call": "equals/1",
+      "qualifier": "Boolean.TRUE",
+      "reason": "library_or_unindexed",
+      "detail": "no_candidates"
+    },
+    {
+      "call": "poll/2",
+      "qualifier": "bench",
+      "reason": "library_or_unindexed",
+      "detail": "no_candidates"
+    },
+    {
+      "call": "assertTrue/1",
+      "qualifier": "Assert",
+      "reason": "library_or_unindexed",
+      "detail": "no_candidates"
+    },
+    {
+      "call": "send/2",
+      "qualifier": "po",
+      "reason": "library_or_unindexed",
+      "detail": "no_candidates"
+    },
+    {
+      "call": "poll/2",
+      "qualifier": "completion",
+      "reason": "library_or_unindexed",
+      "detail": "no_candidates"
+    },
+    {
+      "call": "assertEquals/2",
+      "qualifier": "Assert",
+      "reason": "library_or_unindexed",
+      "detail": "no_candidates"
+    },
+    {
+      "call": "entrySet/0",
+      "qualifier": "result",
+      "reason": "library_or_unindexed",
+      "detail": "no_candidates"
+    },
+    {
+      "call": "assertEquals/2",
+      "qualifier": "Assert",
+      "reason": "library_or_unindexed",
+      "detail": "no_candidates"
+    },
+    {
+      "call": "getValue/0",
+      "qualifier": "kv",
+      "reason": "library_or_unindexed",
+      "detail": "no_candidates"
+    },
+    {
+      "call": "info/2",
+      "qualifier": "log",
+      "reason": "library_or_unindexed",
+      "detail": "no_candidates"
+    },
+    {
+      "call": "getKey/0",
+      "qualifier": "kv",
+      "reason": "library_or_unindexed",
+      "detail": "no_candidates"
+    }
+  ],
+  "inlined_count": 4,
+  "skipped_count": 17
+}
