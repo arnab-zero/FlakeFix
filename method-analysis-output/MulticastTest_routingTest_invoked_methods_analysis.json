@@ -1,0 +1,1245 @@
+{
+  "analysis_metadata": {
+    "analyzer_version": "1.0.0",
+    "analysis_timestamp": "2026-02-11T19:21:18.274285Z",
+    "project_root": "C:\\Downloads\\mercury-main",
+    "max_hops": 2
+  },
+  "test_method": {
+    "name": "routingTest",
+    "class_name": "MulticastTest",
+    "package_name": "org.platformlambda.core",
+    "full_qualified_name": "org.platformlambda.core.MulticastTest.routingTest",
+    "file_path": "C:\\Downloads\\mercury-main\\system\\platform-core\\src\\test\\java\\org\\platformlambda\\core\\MulticastTest.java",
+    "location": {
+      "start_line": 53,
+      "end_line": 84
+    },
+    "parameters": [],
+    "body": {
+      "lines": [
+        "    public void routingTest() throws IOException, InterruptedException {",
+        "        final EventEmitter po = EventEmitter.getInstance();",
+        "        final String[] targets = {\"v1.hello.service.1\", \"v1.hello.service.2\"};",
+        "        final String TEXT = \"ok\";",
+        "        final AtomicInteger counter = new AtomicInteger(0);",
+        "        final BlockingQueue<Boolean> completion = new ArrayBlockingQueue<>(1);",
+        "        final ConcurrentMap<String, Object> result = new ConcurrentHashMap<>();",
+        "        LambdaFunction f = (headers, input, instance) -> {",
+        "            String myRoute = headers.get(MY_ROUTE);",
+        "            result.put(myRoute, input);",
+        "            if (counter.incrementAndGet() == 2) {",
+        "                completion.offer(true);",
+        "            }",
+        "            return true;",
+        "        };",
+        "        Platform platform = Platform.getInstance();",
+        "        final BlockingQueue<Boolean> bench = new ArrayBlockingQueue<>(1);",
+        "        platform.waitForProvider(\"v1.hello.world\", 5).onSuccess(bench::offer);",
+        "        boolean available = Boolean.TRUE.equals(bench.poll(5, TimeUnit.SECONDS));",
+        "        Assert.assertTrue(available);",
+        "        for (String t: targets) {",
+        "            platform.registerPrivate(t, f, 1);",
+        "        }",
+        "        // Event targeted to v1.hello.world will be multicasted to v1.hello.service.1 and v1.hello.service.2",
+        "        po.send(\"v1.hello.world\", TEXT);",
+        "        completion.poll(5, TimeUnit.SECONDS);",
+        "        Assert.assertEquals(2, result.size());",
+        "        for (Map.Entry<String, Object> kv: result.entrySet()) {",
+        "            Assert.assertEquals(TEXT, kv.getValue());",
+        "            log.info(\"Result from {} is correct\", kv.getKey());",
+        "        }",
+        "    }"
+      ],
+      "full_text": "    public void routingTest() throws IOException, InterruptedException {\n        final EventEmitter po = EventEmitter.getInstance();\n        final String[] targets = {\"v1.hello.service.1\", \"v1.hello.service.2\"};\n        final String TEXT = \"ok\";\n        final AtomicInteger counter = new AtomicInteger(0);\n        final BlockingQueue<Boolean> completion = new ArrayBlockingQueue<>(1);\n        final ConcurrentMap<String, Object> result = new ConcurrentHashMap<>();\n        LambdaFunction f = (headers, input, instance) -> {\n            String myRoute = headers.get(MY_ROUTE);\n            result.put(myRoute, input);\n            if (counter.incrementAndGet() == 2) {\n                completion.offer(true);\n            }\n            return true;\n        };\n        Platform platform = Platform.getInstance();\n        final BlockingQueue<Boolean> bench = new ArrayBlockingQueue<>(1);\n        platform.waitForProvider(\"v1.hello.world\", 5).onSuccess(bench::offer);\n        boolean available = Boolean.TRUE.equals(bench.poll(5, TimeUnit.SECONDS));\n        Assert.assertTrue(available);\n        for (String t: targets) {\n            platform.registerPrivate(t, f, 1);\n        }\n        // Event targeted to v1.hello.world will be multicasted to v1.hello.service.1 and v1.hello.service.2\n        po.send(\"v1.hello.world\", TEXT);\n        completion.poll(5, TimeUnit.SECONDS);\n        Assert.assertEquals(2, result.size());\n        for (Map.Entry<String, Object> kv: result.entrySet()) {\n            Assert.assertEquals(TEXT, kv.getValue());\n            log.info(\"Result from {} is correct\", kv.getKey());\n        }\n    }"
+    },
+    "calls": [
+      {
+        "name": "getInstance",
+        "class_name": "EventEmitter",
+        "package_name": "org.platformlambda.core.system",
+        "full_qualified_name": "org.platformlambda.core.system.EventEmitter.getInstance",
+        "file_path": "C:\\Downloads\\mercury-main\\system\\platform-core\\src\\main\\java\\org\\platformlambda\\core\\system\\EventEmitter.java",
+        "location": {
+          "start_line": 135,
+          "end_line": 137
+        },
+        "parameters": [],
+        "body": {
+          "lines": [
+            "    public static EventEmitter getInstance() {",
+            "        return INSTANCE;",
+            "    }"
+          ],
+          "full_text": "    public static EventEmitter getInstance() {\n        return INSTANCE;\n    }"
+        },
+        "calls": []
+      },
+      {
+        "name": "get",
+        "class_name": "AsyncObjectStreamReader",
+        "package_name": "org.platformlambda.core.system",
+        "full_qualified_name": "org.platformlambda.core.system.AsyncObjectStreamReader.get",
+        "file_path": "C:\\Downloads\\mercury-main\\system\\platform-core\\src\\main\\java\\org\\platformlambda\\core\\system\\AsyncObjectStreamReader.java",
+        "location": {
+          "start_line": 51,
+          "end_line": 78
+        },
+        "parameters": [],
+        "body": {
+          "lines": [
+            "    public Future<Object> get() {",
+            "        final EventEmitter po = EventEmitter.getInstance();",
+            "        return Future.future(promise -> {",
+            "            Platform platform = Platform.getInstance();",
+            "            if (eof || closed) {",
+            "                platform.getEventExecutor().submit(() -> promise.complete(null));",
+            "            } else {",
+            "                EventEnvelope request = new EventEnvelope().setTo(streamId).setHeader(TYPE, READ);",
+            "                try {",
+            "                    po.asyncRequest(request, timeout)",
+            "                            .onSuccess(event -> {",
+            "                                Map<String, String> headers = event.getHeaders();",
+            "                                if (DATA.equals(headers.get(TYPE))) {",
+            "                                    promise.complete(event.getBody());",
+            "                                }",
+            "                                if (END_OF_STREAM.equals(headers.get(TYPE))) {",
+            "                                    eof = true;",
+            "                                    promise.complete(null);",
+            "                                }",
+            "                            })",
+            "                            .onFailure(promise::fail);",
+            "",
+            "                } catch (IOException e) {",
+            "                    platform.getEventExecutor().submit(() -> promise.fail(e));",
+            "                }",
+            "            }",
+            "        });",
+            "    }"
+          ],
+          "full_text": "    public Future<Object> get() {\n        final EventEmitter po = EventEmitter.getInstance();\n        return Future.future(promise -> {\n            Platform platform = Platform.getInstance();\n            if (eof || closed) {\n                platform.getEventExecutor().submit(() -> promise.complete(null));\n            } else {\n                EventEnvelope request = new EventEnvelope().setTo(streamId).setHeader(TYPE, READ);\n                try {\n                    po.asyncRequest(request, timeout)\n                            .onSuccess(event -> {\n                                Map<String, String> headers = event.getHeaders();\n                                if (DATA.equals(headers.get(TYPE))) {\n                                    promise.complete(event.getBody());\n                                }\n                                if (END_OF_STREAM.equals(headers.get(TYPE))) {\n                                    eof = true;\n                                    promise.complete(null);\n                                }\n                            })\n                            .onFailure(promise::fail);\n\n                } catch (IOException e) {\n                    platform.getEventExecutor().submit(() -> promise.fail(e));\n                }\n            }\n        });\n    }"
+        },
+        "calls": [
+          {
+            "name": "getInstance",
+            "class_name": "EventEmitter",
+            "package_name": "org.platformlambda.core.system",
+            "full_qualified_name": "org.platformlambda.core.system.EventEmitter.getInstance",
+            "file_path": "C:\\Downloads\\mercury-main\\system\\platform-core\\src\\main\\java\\org\\platformlambda\\core\\system\\EventEmitter.java",
+            "location": {
+              "start_line": 135,
+              "end_line": 137
+            },
+            "parameters": [],
+            "body": {
+              "lines": [
+                "    public static EventEmitter getInstance() {",
+                "        return INSTANCE;",
+                "    }"
+              ],
+              "full_text": "    public static EventEmitter getInstance() {\n        return INSTANCE;\n    }"
+            },
+            "calls": []
+          },
+          {
+            "name": "getInstance",
+            "class_name": "Platform",
+            "package_name": "org.platformlambda.core.system",
+            "full_qualified_name": "org.platformlambda.core.system.Platform.getInstance",
+            "file_path": "C:\\Downloads\\mercury-main\\system\\platform-core\\src\\main\\java\\org\\platformlambda\\core\\system\\Platform.java",
+            "location": {
+              "start_line": 73,
+              "end_line": 76
+            },
+            "parameters": [],
+            "body": {
+              "lines": [
+                "    public static Platform getInstance() {",
+                "        initialize();",
+                "        return INSTANCE;",
+                "    }"
+              ],
+              "full_text": "    public static Platform getInstance() {\n        initialize();\n        return INSTANCE;\n    }"
+            },
+            "calls": [
+              {
+                "name": "initialize",
+                "class_name": "Platform",
+                "package_name": "org.platformlambda.core.system",
+                "full_qualified_name": "org.platformlambda.core.system.Platform.initialize",
+                "file_path": "C:\\Downloads\\mercury-main\\system\\platform-core\\src\\main\\java\\org\\platformlambda\\core\\system\\Platform.java",
+                "location": {
+                  "start_line": 78,
+                  "end_line": 91
+                },
+                "parameters": [],
+                "body": {
+                  "lines": [
+                    "    private static void initialize() {",
+                    "        if (initCounter.incrementAndGet() == 1) {",
+                    "            AppConfigReader config = AppConfigReader.getInstance();",
+                    "            int poolSize = Math.max(32, Utility.getInstance().str2int(config.getProperty(\"kernel.thread.pool\", \"100\")));",
+                    "            system = Vertx.vertx().eventBus();",
+                    "            vertx = Vertx.vertx();",
+                    "            cache = SimpleCache.createCache(\"system.log.cache\", 30000);",
+                    "            executor = Executors.newWorkStealingPool(poolSize);",
+                    "            log.info(\"Event system started with up to {} kernel threads\", poolSize);",
+                    "        }",
+                    "        if (initCounter.get() > 10000) {",
+                    "            initCounter.set(10);",
+                    "        }",
+                    "    }"
+                  ],
+                  "full_text": "    private static void initialize() {\n        if (initCounter.incrementAndGet() == 1) {\n            AppConfigReader config = AppConfigReader.getInstance();\n            int poolSize = Math.max(32, Utility.getInstance().str2int(config.getProperty(\"kernel.thread.pool\", \"100\")));\n            system = Vertx.vertx().eventBus();\n            vertx = Vertx.vertx();\n            cache = SimpleCache.createCache(\"system.log.cache\", 30000);\n            executor = Executors.newWorkStealingPool(poolSize);\n            log.info(\"Event system started with up to {} kernel threads\", poolSize);\n        }\n        if (initCounter.get() > 10000) {\n            initCounter.set(10);\n        }\n    }"
+                },
+                "calls": []
+              }
+            ]
+          },
+          {
+            "name": "getEventExecutor",
+            "class_name": "Platform",
+            "package_name": "org.platformlambda.core.system",
+            "full_qualified_name": "org.platformlambda.core.system.Platform.getEventExecutor",
+            "file_path": "C:\\Downloads\\mercury-main\\system\\platform-core\\src\\main\\java\\org\\platformlambda\\core\\system\\Platform.java",
+            "location": {
+              "start_line": 160,
+              "end_line": 162
+            },
+            "parameters": [],
+            "body": {
+              "lines": [
+                "    public ExecutorService getEventExecutor() {",
+                "        return executor;",
+                "    }"
+              ],
+              "full_text": "    public ExecutorService getEventExecutor() {\n        return executor;\n    }"
+            },
+            "calls": []
+          },
+          {
+            "name": "submit",
+            "class_name": "ServletBase",
+            "package_name": "org.platformlambda.servlets",
+            "full_qualified_name": "org.platformlambda.servlets.ServletBase.submit",
+            "file_path": "C:\\Downloads\\mercury-main\\system\\rest-spring-2\\src\\main\\java\\org\\platformlambda\\servlets\\ServletBase.java",
+            "location": {
+              "start_line": 54,
+              "end_line": 124
+            },
+            "parameters": [
+              "String type",
+              "HttpServletRequest request",
+              "HttpServletResponse response"
+            ],
+            "body": {
+              "lines": [
+                "    protected void submit(String type, HttpServletRequest request, HttpServletResponse response) throws IOException {",
+                "        final String myOrigin = Platform.getInstance().getOrigin();",
+                "        final String appOrigin = request.getHeader(APP_INSTANCE);",
+                "        if (appOrigin == null) {",
+                "            if (protectEndpoint && !isIntranetAddress(request)) {",
+                "                response.sendError(404, \"Resource not found\");",
+                "                return;",
+                "            }",
+                "        }",
+                "        final String origin = appOrigin == null? myOrigin : appOrigin;",
+                "        EventEmitter po = EventEmitter.getInstance();",
+                "        EventEnvelope event = new EventEnvelope().setHeader(TYPE, type);",
+                "        String accept = request.getHeader(ACCEPT);",
+                "        event.setHeader(ACCEPT_CONTENT, accept != null? accept : MediaType.APPLICATION_JSON);",
+                "        if (origin.equals(myOrigin)) {",
+                "            event.setTo(EventEmitter.ACTUATOR_SERVICES);",
+                "        } else {",
+                "            if (!po.exists(origin)) {",
+                "                response.sendError(404, origin+\" is not reachable\");",
+                "                return;",
+                "            }",
+                "            event.setTo(EventEmitter.ACTUATOR_SERVICES+\"@\"+origin);",
+                "        }",
+                "        AsyncContext context = request.startAsync();",
+                "        Future<EventEnvelope> result = po.asyncRequest(event, 10000);",
+                "        result.onSuccess(evt -> {",
+                "            Utility util = Utility.getInstance();",
+                "            HttpServletResponse res = (HttpServletResponse) context.getResponse();",
+                "            res.setStatus(evt.getStatus());",
+                "            final Object data = evt.getRawBody();",
+                "            final String contentType = evt.getHeaders().getOrDefault(CONTENT_TYPE, MediaType.APPLICATION_JSON);",
+                "            final byte[] b;",
+                "            if (MediaType.TEXT_PLAIN.equals(contentType) && data instanceof String) {",
+                "                res.setContentType(MediaType.TEXT_PLAIN);",
+                "                b = util.getUTF((String) data);",
+                "            } else {",
+                "                if (MediaType.APPLICATION_XML.equals(contentType)) {",
+                "                    res.setContentType(MediaType.APPLICATION_XML);",
+                "                    if (data instanceof Map) {",
+                "                        b = util.getUTF(xml.write(data));",
+                "                    } else {",
+                "                        b = util.getUTF(data == null? \"\" : data.toString());",
+                "                    }",
+                "                } else {",
+                "                    res.setContentType(MediaType.APPLICATION_JSON);",
+                "                    if (data instanceof Map) {",
+                "                        b = SimpleMapper.getInstance().getMapper().writeValueAsBytes(data);",
+                "                    } else {",
+                "                        b = util.getUTF(data == null? \"\" : data.toString());",
+                "                    }",
+                "                }",
+                "            }",
+                "            res.setContentLength(b.length);",
+                "            try {",
+                "                res.getOutputStream().write(b);",
+                "            } catch (IOException e) {",
+                "                log.error(\"Unable to send HTTP response\", e);",
+                "            }",
+                "            context.complete();",
+                "        });",
+                "        result.onFailure(ex -> {",
+                "            HttpServletResponse res = (HttpServletResponse) context.getResponse();",
+                "            res.setContentType(MediaType.APPLICATION_JSON);",
+                "            try {",
+                "                res.sendError(408, origin+\" timeout\");",
+                "            } catch (IOException e) {",
+                "                log.error(\"Unable to send HTTP response\", e);",
+                "            }",
+                "            context.complete();",
+                "        });",
+                "    }"
+              ],
+              "full_text": "    protected void submit(String type, HttpServletRequest request, HttpServletResponse response) throws IOException {\n        final String myOrigin = Platform.getInstance().getOrigin();\n        final String appOrigin = request.getHeader(APP_INSTANCE);\n        if (appOrigin == null) {\n            if (protectEndpoint && !isIntranetAddress(request)) {\n                response.sendError(404, \"Resource not found\");\n                return;\n            }\n        }\n        final String origin = appOrigin == null? myOrigin : appOrigin;\n        EventEmitter po = EventEmitter.getInstance();\n        EventEnvelope event = new EventEnvelope().setHeader(TYPE, type);\n        String accept = request.getHeader(ACCEPT);\n        event.setHeader(ACCEPT_CONTENT, accept != null? accept : MediaType.APPLICATION_JSON);\n        if (origin.equals(myOrigin)) {\n            event.setTo(EventEmitter.ACTUATOR_SERVICES);\n        } else {\n            if (!po.exists(origin)) {\n                response.sendError(404, origin+\" is not reachable\");\n                return;\n            }\n            event.setTo(EventEmitter.ACTUATOR_SERVICES+\"@\"+origin);\n        }\n        AsyncContext context = request.startAsync();\n        Future<EventEnvelope> result = po.asyncRequest(event, 10000);\n        result.onSuccess(evt -> {\n            Utility util = Utility.getInstance();\n            HttpServletResponse res = (HttpServletResponse) context.getResponse();\n            res.setStatus(evt.getStatus());\n            final Object data = evt.getRawBody();\n            final String contentType = evt.getHeaders().getOrDefault(CONTENT_TYPE, MediaType.APPLICATION_JSON);\n            final byte[] b;\n            if (MediaType.TEXT_PLAIN.equals(contentType) && data instanceof String) {\n                res.setContentType(MediaType.TEXT_PLAIN);\n                b = util.getUTF((String) data);\n            } else {\n                if (MediaType.APPLICATION_XML.equals(contentType)) {\n                    res.setContentType(MediaType.APPLICATION_XML);\n                    if (data instanceof Map) {\n                        b = util.getUTF(xml.write(data));\n                    } else {\n                        b = util.getUTF(data == null? \"\" : data.toString());\n                    }\n                } else {\n                    res.setContentType(MediaType.APPLICATION_JSON);\n                    if (data instanceof Map) {\n                        b = SimpleMapper.getInstance().getMapper().writeValueAsBytes(data);\n                    } else {\n                        b = util.getUTF(data == null? \"\" : data.toString());\n                    }\n                }\n            }\n            res.setContentLength(b.length);\n            try {\n                res.getOutputStream().write(b);\n            } catch (IOException e) {\n                log.error(\"Unable to send HTTP response\", e);\n            }\n            context.complete();\n        });\n        result.onFailure(ex -> {\n            HttpServletResponse res = (HttpServletResponse) context.getResponse();\n            res.setContentType(MediaType.APPLICATION_JSON);\n            try {\n                res.sendError(408, origin+\" timeout\");\n            } catch (IOException e) {\n                log.error(\"Unable to send HTTP response\", e);\n            }\n            context.complete();\n        });\n    }"
+            },
+            "calls": []
+          },
+          {
+            "name": "setTo",
+            "class_name": "EventEnvelope",
+            "package_name": "org.platformlambda.core.models",
+            "full_qualified_name": "org.platformlambda.core.models.EventEnvelope.setTo",
+            "file_path": "C:\\Downloads\\mercury-main\\system\\platform-core\\src\\main\\java\\org\\platformlambda\\core\\models\\EventEnvelope.java",
+            "location": {
+              "start_line": 345,
+              "end_line": 348
+            },
+            "parameters": [
+              "String to"
+            ],
+            "body": {
+              "lines": [
+                "    public EventEnvelope setTo(String to) {",
+                "        this.to = to;",
+                "        return this;",
+                "    }"
+              ],
+              "full_text": "    public EventEnvelope setTo(String to) {\n        this.to = to;\n        return this;\n    }"
+            },
+            "calls": []
+          },
+          {
+            "name": "setHeader",
+            "class_name": "AsyncHttpRequest",
+            "package_name": "org.platformlambda.core.models",
+            "full_qualified_name": "org.platformlambda.core.models.AsyncHttpRequest.setHeader",
+            "file_path": "C:\\Downloads\\mercury-main\\system\\platform-core\\src\\main\\java\\org\\platformlambda\\core\\models\\AsyncHttpRequest.java",
+            "location": {
+              "start_line": 125,
+              "end_line": 128
+            },
+            "parameters": [
+              "String key",
+              "String value"
+            ],
+            "body": {
+              "lines": [
+                "    public AsyncHttpRequest setHeader(String key, String value) {",
+                "        setNonNullValue(headers, key, value);",
+                "        return this;",
+                "    }"
+              ],
+              "full_text": "    public AsyncHttpRequest setHeader(String key, String value) {\n        setNonNullValue(headers, key, value);\n        return this;\n    }"
+            },
+            "calls": []
+          },
+          {
+            "name": "asyncRequest",
+            "class_name": "EventEmitter",
+            "package_name": "org.platformlambda.core.system",
+            "full_qualified_name": "org.platformlambda.core.system.EventEmitter.asyncRequest",
+            "file_path": "C:\\Downloads\\mercury-main\\system\\platform-core\\src\\main\\java\\org\\platformlambda\\core\\system\\EventEmitter.java",
+            "location": {
+              "start_line": 789,
+              "end_line": 878
+            },
+            "parameters": [
+              "EventEnvelope event",
+              "long timeout",
+              "Map headers",
+              "String eventEndpoint",
+              "boolean rpc"
+            ],
+            "body": {
+              "lines": [
+                "                                              String eventEndpoint, boolean rpc) throws IOException {",
+                "        if (event == null) {",
+                "            throw new IllegalArgumentException(MISSING_EVENT);",
+                "        }",
+                "        String dest = event.getTo();",
+                "        if (dest == null) {",
+                "            throw new IllegalArgumentException(MISSING_ROUTING_PATH);",
+                "        }",
+                "        final URI url;",
+                "        try {",
+                "            url = new URI(eventEndpoint);",
+                "        } catch (URISyntaxException e) {",
+                "            throw new IllegalArgumentException(e.getMessage());",
+                "        }",
+                "        AsyncHttpRequest req = new AsyncHttpRequest();",
+                "        req.setMethod(POST);",
+                "        req.setHeader(CONTENT_TYPE, \"application/octet-stream\");",
+                "        req.setHeader(ACCEPT, \"*/*\");",
+                "        req.setHeader(X_TIMEOUT, String.valueOf(Math.max(100L, timeout)));",
+                "        if (!rpc) {",
+                "            req.setHeader(X_ASYNC, \"true\");",
+                "        }",
+                "        // optional HTTP request headers",
+                "        if (headers != null) {",
+                "            for (Map.Entry<String, String> kv : headers.entrySet()) {",
+                "                req.setHeader(kv.getKey(), kv.getValue());",
+                "            }",
+                "        }",
+                "        // propagate trace-ID if any",
+                "        if (event.getTraceId() != null) {",
+                "            req.setHeader(X_TRACE_ID, event.getTraceId());",
+                "        }",
+                "        req.setUrl(url.getPath());",
+                "        req.setTargetHost(getTargetFromUrl(url));",
+                "        byte[] b = event.toBytes();",
+                "        req.setBody(b);",
+                "        req.setContentLength(b.length);",
+                "        EventEnvelope request = new EventEnvelope().setTo(HTTP_REQUEST).setBody(req);",
+                "        if (event.getFrom() != null) {",
+                "            request.setFrom(event.getFrom());",
+                "        }",
+                "        if (event.getTraceId() != null) {",
+                "            request.setTraceId(event.getTraceId());",
+                "        }",
+                "        if (event.getTracePath() != null) {",
+                "            request.setTracePath(event.getTracePath());",
+                "        }",
+                "        return Future.future(promise -> {",
+                "            try {",
+                "                // add 100 ms to make sure it does not time out earlier than the target service",
+                "                Future<EventEnvelope> res = asyncRequest(request, Math.max(100L, timeout)+100L);",
+                "                res.onSuccess(evt -> {",
+                "                    Object o = evt.getBody();",
+                "                    if (o instanceof byte[]) {",
+                "                        try {",
+                "                            EventEnvelope response = new EventEnvelope((byte[]) evt.getBody());",
+                "                            promise.complete(response);",
+                "                        } catch (IOException e) {",
+                "                            // response is not a packed EventEnvelope",
+                "                            promise.complete(new EventEnvelope()",
+                "                                    .setStatus(400).setBody(\"Did you configure rest.yaml correctly? \" +",
+                "                                                            \"Invalid result set - \"+e.getMessage()));",
+                "                        }",
+                "                    } else {",
+                "                        if (evt.getStatus() >= 400 && evt.getBody() instanceof Map) {",
+                "                            Map<String, Object> data = (Map<String, Object>) evt.getBody();",
+                "                            if (ERROR.equals(data.get(TYPE)) && data.containsKey(MESSAGE) &&",
+                "                                    data.get(MESSAGE) instanceof String) {",
+                "                                EventEnvelope error = new EventEnvelope()",
+                "                                        .setStatus(evt.getStatus()).setBody(data.get(MESSAGE));",
+                "                                promise.complete(error);",
+                "                            } else {",
+                "                                promise.complete(evt);",
+                "                            }",
+                "                        } else {",
+                "                            promise.complete(evt);",
+                "                        }",
+                "                    }",
+                "                });",
+                "                res.onFailure(e -> promise.complete(new EventEnvelope().setStatus(408).setBody(e.getMessage())));",
+                "",
+                "            } catch (IllegalArgumentException e) {",
+                "                Platform.getInstance().getEventExecutor().submit(() ->",
+                "                        promise.complete(new EventEnvelope().setStatus(400).setBody(e.getMessage())));",
+                "            } catch (IOException e) {",
+                "                Platform.getInstance().getEventExecutor().submit(() ->",
+                "                        promise.complete(new EventEnvelope().setStatus(500).setBody(e.getMessage())));",
+                "            }",
+                "        });",
+                "    }"
+              ],
+              "full_text": "                                              String eventEndpoint, boolean rpc) throws IOException {\n        if (event == null) {\n            throw new IllegalArgumentException(MISSING_EVENT);\n        }\n        String dest = event.getTo();\n        if (dest == null) {\n            throw new IllegalArgumentException(MISSING_ROUTING_PATH);\n        }\n        final URI url;\n        try {\n            url = new URI(eventEndpoint);\n        } catch (URISyntaxException e) {\n            throw new IllegalArgumentException(e.getMessage());\n        }\n        AsyncHttpRequest req = new AsyncHttpRequest();\n        req.setMethod(POST);\n        req.setHeader(CONTENT_TYPE, \"application/octet-stream\");\n        req.setHeader(ACCEPT, \"*/*\");\n        req.setHeader(X_TIMEOUT, String.valueOf(Math.max(100L, timeout)));\n        if (!rpc) {\n            req.setHeader(X_ASYNC, \"true\");\n        }\n        // optional HTTP request headers\n        if (headers != null) {\n            for (Map.Entry<String, String> kv : headers.entrySet()) {\n                req.setHeader(kv.getKey(), kv.getValue());\n            }\n        }\n        // propagate trace-ID if any\n        if (event.getTraceId() != null) {\n            req.setHeader(X_TRACE_ID, event.getTraceId());\n        }\n        req.setUrl(url.getPath());\n        req.setTargetHost(getTargetFromUrl(url));\n        byte[] b = event.toBytes();\n        req.setBody(b);\n        req.setContentLength(b.length);\n        EventEnvelope request = new EventEnvelope().setTo(HTTP_REQUEST).setBody(req);\n        if (event.getFrom() != null) {\n            request.setFrom(event.getFrom());\n        }\n        if (event.getTraceId() != null) {\n            request.setTraceId(event.getTraceId());\n        }\n        if (event.getTracePath() != null) {\n            request.setTracePath(event.getTracePath());\n        }\n        return Future.future(promise -> {\n            try {\n                // add 100 ms to make sure it does not time out earlier than the target service\n                Future<EventEnvelope> res = asyncRequest(request, Math.max(100L, timeout)+100L);\n                res.onSuccess(evt -> {\n                    Object o = evt.getBody();\n                    if (o instanceof byte[]) {\n                        try {\n                            EventEnvelope response = new EventEnvelope((byte[]) evt.getBody());\n                            promise.complete(response);\n                        } catch (IOException e) {\n                            // response is not a packed EventEnvelope\n                            promise.complete(new EventEnvelope()\n                                    .setStatus(400).setBody(\"Did you configure rest.yaml correctly? \" +\n                                                            \"Invalid result set - \"+e.getMessage()));\n                        }\n                    } else {\n                        if (evt.getStatus() >= 400 && evt.getBody() instanceof Map) {\n                            Map<String, Object> data = (Map<String, Object>) evt.getBody();\n                            if (ERROR.equals(data.get(TYPE)) && data.containsKey(MESSAGE) &&\n                                    data.get(MESSAGE) instanceof String) {\n                                EventEnvelope error = new EventEnvelope()\n                                        .setStatus(evt.getStatus()).setBody(data.get(MESSAGE));\n                                promise.complete(error);\n                            } else {\n                                promise.complete(evt);\n                            }\n                        } else {\n                            promise.complete(evt);\n                        }\n                    }\n                });\n                res.onFailure(e -> promise.complete(new EventEnvelope().setStatus(408).setBody(e.getMessage())));\n\n            } catch (IllegalArgumentException e) {\n                Platform.getInstance().getEventExecutor().submit(() ->\n                        promise.complete(new EventEnvelope().setStatus(400).setBody(e.getMessage())));\n            } catch (IOException e) {\n                Platform.getInstance().getEventExecutor().submit(() ->\n                        promise.complete(new EventEnvelope().setStatus(500).setBody(e.getMessage())));\n            }\n        });\n    }"
+            },
+            "calls": []
+          },
+          {
+            "name": "getHeaders",
+            "class_name": "AsyncHttpRequest",
+            "package_name": "org.platformlambda.core.models",
+            "full_qualified_name": "org.platformlambda.core.models.AsyncHttpRequest.getHeaders",
+            "file_path": "C:\\Downloads\\mercury-main\\system\\platform-core\\src\\main\\java\\org\\platformlambda\\core\\models\\AsyncHttpRequest.java",
+            "location": {
+              "start_line": 112,
+              "end_line": 114
+            },
+            "parameters": [],
+            "body": {
+              "lines": [
+                "    public Map<String, String> getHeaders() {",
+                "        return headers;",
+                "    }"
+              ],
+              "full_text": "    public Map<String, String> getHeaders() {\n        return headers;\n    }"
+            },
+            "calls": []
+          },
+          {
+            "name": "get",
+            "class_name": "AsyncObjectStreamReader",
+            "package_name": "org.platformlambda.core.system",
+            "full_qualified_name": "org.platformlambda.core.system.AsyncObjectStreamReader.get",
+            "file_path": "C:\\Downloads\\mercury-main\\system\\platform-core\\src\\main\\java\\org\\platformlambda\\core\\system\\AsyncObjectStreamReader.java",
+            "location": {
+              "start_line": 51,
+              "end_line": 78
+            },
+            "parameters": [],
+            "body": {
+              "lines": [
+                "    public Future<Object> get() {",
+                "        final EventEmitter po = EventEmitter.getInstance();",
+                "        return Future.future(promise -> {",
+                "            Platform platform = Platform.getInstance();",
+                "            if (eof || closed) {",
+                "                platform.getEventExecutor().submit(() -> promise.complete(null));",
+                "            } else {",
+                "                EventEnvelope request = new EventEnvelope().setTo(streamId).setHeader(TYPE, READ);",
+                "                try {",
+                "                    po.asyncRequest(request, timeout)",
+                "                            .onSuccess(event -> {",
+                "                                Map<String, String> headers = event.getHeaders();",
+                "                                if (DATA.equals(headers.get(TYPE))) {",
+                "                                    promise.complete(event.getBody());",
+                "                                }",
+                "                                if (END_OF_STREAM.equals(headers.get(TYPE))) {",
+                "                                    eof = true;",
+                "                                    promise.complete(null);",
+                "                                }",
+                "                            })",
+                "                            .onFailure(promise::fail);",
+                "",
+                "                } catch (IOException e) {",
+                "                    platform.getEventExecutor().submit(() -> promise.fail(e));",
+                "                }",
+                "            }",
+                "        });",
+                "    }"
+              ],
+              "full_text": "    public Future<Object> get() {\n        final EventEmitter po = EventEmitter.getInstance();\n        return Future.future(promise -> {\n            Platform platform = Platform.getInstance();\n            if (eof || closed) {\n                platform.getEventExecutor().submit(() -> promise.complete(null));\n            } else {\n                EventEnvelope request = new EventEnvelope().setTo(streamId).setHeader(TYPE, READ);\n                try {\n                    po.asyncRequest(request, timeout)\n                            .onSuccess(event -> {\n                                Map<String, String> headers = event.getHeaders();\n                                if (DATA.equals(headers.get(TYPE))) {\n                                    promise.complete(event.getBody());\n                                }\n                                if (END_OF_STREAM.equals(headers.get(TYPE))) {\n                                    eof = true;\n                                    promise.complete(null);\n                                }\n                            })\n                            .onFailure(promise::fail);\n\n                } catch (IOException e) {\n                    platform.getEventExecutor().submit(() -> promise.fail(e));\n                }\n            }\n        });\n    }"
+            },
+            "calls": []
+          },
+          {
+            "name": "getBody",
+            "class_name": "AsyncHttpRequest",
+            "package_name": "org.platformlambda.core.models",
+            "full_qualified_name": "org.platformlambda.core.models.AsyncHttpRequest.getBody",
+            "file_path": "C:\\Downloads\\mercury-main\\system\\platform-core\\src\\main\\java\\org\\platformlambda\\core\\models\\AsyncHttpRequest.java",
+            "location": {
+              "start_line": 135,
+              "end_line": 137
+            },
+            "parameters": [],
+            "body": {
+              "lines": [
+                "    public Object getBody() {",
+                "        return body;",
+                "    }"
+              ],
+              "full_text": "    public Object getBody() {\n        return body;\n    }"
+            },
+            "calls": []
+          },
+          {
+            "name": "get",
+            "class_name": "AsyncObjectStreamReader",
+            "package_name": "org.platformlambda.core.system",
+            "full_qualified_name": "org.platformlambda.core.system.AsyncObjectStreamReader.get",
+            "file_path": "C:\\Downloads\\mercury-main\\system\\platform-core\\src\\main\\java\\org\\platformlambda\\core\\system\\AsyncObjectStreamReader.java",
+            "location": {
+              "start_line": 51,
+              "end_line": 78
+            },
+            "parameters": [],
+            "body": {
+              "lines": [
+                "    public Future<Object> get() {",
+                "        final EventEmitter po = EventEmitter.getInstance();",
+                "        return Future.future(promise -> {",
+                "            Platform platform = Platform.getInstance();",
+                "            if (eof || closed) {",
+                "                platform.getEventExecutor().submit(() -> promise.complete(null));",
+                "            } else {",
+                "                EventEnvelope request = new EventEnvelope().setTo(streamId).setHeader(TYPE, READ);",
+                "                try {",
+                "                    po.asyncRequest(request, timeout)",
+                "                            .onSuccess(event -> {",
+                "                                Map<String, String> headers = event.getHeaders();",
+                "                                if (DATA.equals(headers.get(TYPE))) {",
+                "                                    promise.complete(event.getBody());",
+                "                                }",
+                "                                if (END_OF_STREAM.equals(headers.get(TYPE))) {",
+                "                                    eof = true;",
+                "                                    promise.complete(null);",
+                "                                }",
+                "                            })",
+                "                            .onFailure(promise::fail);",
+                "",
+                "                } catch (IOException e) {",
+                "                    platform.getEventExecutor().submit(() -> promise.fail(e));",
+                "                }",
+                "            }",
+                "        });",
+                "    }"
+              ],
+              "full_text": "    public Future<Object> get() {\n        final EventEmitter po = EventEmitter.getInstance();\n        return Future.future(promise -> {\n            Platform platform = Platform.getInstance();\n            if (eof || closed) {\n                platform.getEventExecutor().submit(() -> promise.complete(null));\n            } else {\n                EventEnvelope request = new EventEnvelope().setTo(streamId).setHeader(TYPE, READ);\n                try {\n                    po.asyncRequest(request, timeout)\n                            .onSuccess(event -> {\n                                Map<String, String> headers = event.getHeaders();\n                                if (DATA.equals(headers.get(TYPE))) {\n                                    promise.complete(event.getBody());\n                                }\n                                if (END_OF_STREAM.equals(headers.get(TYPE))) {\n                                    eof = true;\n                                    promise.complete(null);\n                                }\n                            })\n                            .onFailure(promise::fail);\n\n                } catch (IOException e) {\n                    platform.getEventExecutor().submit(() -> promise.fail(e));\n                }\n            }\n        });\n    }"
+            },
+            "calls": []
+          },
+          {
+            "name": "getEventExecutor",
+            "class_name": "Platform",
+            "package_name": "org.platformlambda.core.system",
+            "full_qualified_name": "org.platformlambda.core.system.Platform.getEventExecutor",
+            "file_path": "C:\\Downloads\\mercury-main\\system\\platform-core\\src\\main\\java\\org\\platformlambda\\core\\system\\Platform.java",
+            "location": {
+              "start_line": 160,
+              "end_line": 162
+            },
+            "parameters": [],
+            "body": {
+              "lines": [
+                "    public ExecutorService getEventExecutor() {",
+                "        return executor;",
+                "    }"
+              ],
+              "full_text": "    public ExecutorService getEventExecutor() {\n        return executor;\n    }"
+            },
+            "calls": []
+          },
+          {
+            "name": "submit",
+            "class_name": "ServletBase",
+            "package_name": "org.platformlambda.servlets",
+            "full_qualified_name": "org.platformlambda.servlets.ServletBase.submit",
+            "file_path": "C:\\Downloads\\mercury-main\\system\\rest-spring-2\\src\\main\\java\\org\\platformlambda\\servlets\\ServletBase.java",
+            "location": {
+              "start_line": 54,
+              "end_line": 124
+            },
+            "parameters": [
+              "String type",
+              "HttpServletRequest request",
+              "HttpServletResponse response"
+            ],
+            "body": {
+              "lines": [
+                "    protected void submit(String type, HttpServletRequest request, HttpServletResponse response) throws IOException {",
+                "        final String myOrigin = Platform.getInstance().getOrigin();",
+                "        final String appOrigin = request.getHeader(APP_INSTANCE);",
+                "        if (appOrigin == null) {",
+                "            if (protectEndpoint && !isIntranetAddress(request)) {",
+                "                response.sendError(404, \"Resource not found\");",
+                "                return;",
+                "            }",
+                "        }",
+                "        final String origin = appOrigin == null? myOrigin : appOrigin;",
+                "        EventEmitter po = EventEmitter.getInstance();",
+                "        EventEnvelope event = new EventEnvelope().setHeader(TYPE, type);",
+                "        String accept = request.getHeader(ACCEPT);",
+                "        event.setHeader(ACCEPT_CONTENT, accept != null? accept : MediaType.APPLICATION_JSON);",
+                "        if (origin.equals(myOrigin)) {",
+                "            event.setTo(EventEmitter.ACTUATOR_SERVICES);",
+                "        } else {",
+                "            if (!po.exists(origin)) {",
+                "                response.sendError(404, origin+\" is not reachable\");",
+                "                return;",
+                "            }",
+                "            event.setTo(EventEmitter.ACTUATOR_SERVICES+\"@\"+origin);",
+                "        }",
+                "        AsyncContext context = request.startAsync();",
+                "        Future<EventEnvelope> result = po.asyncRequest(event, 10000);",
+                "        result.onSuccess(evt -> {",
+                "            Utility util = Utility.getInstance();",
+                "            HttpServletResponse res = (HttpServletResponse) context.getResponse();",
+                "            res.setStatus(evt.getStatus());",
+                "            final Object data = evt.getRawBody();",
+                "            final String contentType = evt.getHeaders().getOrDefault(CONTENT_TYPE, MediaType.APPLICATION_JSON);",
+                "            final byte[] b;",
+                "            if (MediaType.TEXT_PLAIN.equals(contentType) && data instanceof String) {",
+                "                res.setContentType(MediaType.TEXT_PLAIN);",
+                "                b = util.getUTF((String) data);",
+                "            } else {",
+                "                if (MediaType.APPLICATION_XML.equals(contentType)) {",
+                "                    res.setContentType(MediaType.APPLICATION_XML);",
+                "                    if (data instanceof Map) {",
+                "                        b = util.getUTF(xml.write(data));",
+                "                    } else {",
+                "                        b = util.getUTF(data == null? \"\" : data.toString());",
+                "                    }",
+                "                } else {",
+                "                    res.setContentType(MediaType.APPLICATION_JSON);",
+                "                    if (data instanceof Map) {",
+                "                        b = SimpleMapper.getInstance().getMapper().writeValueAsBytes(data);",
+                "                    } else {",
+                "                        b = util.getUTF(data == null? \"\" : data.toString());",
+                "                    }",
+                "                }",
+                "            }",
+                "            res.setContentLength(b.length);",
+                "            try {",
+                "                res.getOutputStream().write(b);",
+                "            } catch (IOException e) {",
+                "                log.error(\"Unable to send HTTP response\", e);",
+                "            }",
+                "            context.complete();",
+                "        });",
+                "        result.onFailure(ex -> {",
+                "            HttpServletResponse res = (HttpServletResponse) context.getResponse();",
+                "            res.setContentType(MediaType.APPLICATION_JSON);",
+                "            try {",
+                "                res.sendError(408, origin+\" timeout\");",
+                "            } catch (IOException e) {",
+                "                log.error(\"Unable to send HTTP response\", e);",
+                "            }",
+                "            context.complete();",
+                "        });",
+                "    }"
+              ],
+              "full_text": "    protected void submit(String type, HttpServletRequest request, HttpServletResponse response) throws IOException {\n        final String myOrigin = Platform.getInstance().getOrigin();\n        final String appOrigin = request.getHeader(APP_INSTANCE);\n        if (appOrigin == null) {\n            if (protectEndpoint && !isIntranetAddress(request)) {\n                response.sendError(404, \"Resource not found\");\n                return;\n            }\n        }\n        final String origin = appOrigin == null? myOrigin : appOrigin;\n        EventEmitter po = EventEmitter.getInstance();\n        EventEnvelope event = new EventEnvelope().setHeader(TYPE, type);\n        String accept = request.getHeader(ACCEPT);\n        event.setHeader(ACCEPT_CONTENT, accept != null? accept : MediaType.APPLICATION_JSON);\n        if (origin.equals(myOrigin)) {\n            event.setTo(EventEmitter.ACTUATOR_SERVICES);\n        } else {\n            if (!po.exists(origin)) {\n                response.sendError(404, origin+\" is not reachable\");\n                return;\n            }\n            event.setTo(EventEmitter.ACTUATOR_SERVICES+\"@\"+origin);\n        }\n        AsyncContext context = request.startAsync();\n        Future<EventEnvelope> result = po.asyncRequest(event, 10000);\n        result.onSuccess(evt -> {\n            Utility util = Utility.getInstance();\n            HttpServletResponse res = (HttpServletResponse) context.getResponse();\n            res.setStatus(evt.getStatus());\n            final Object data = evt.getRawBody();\n            final String contentType = evt.getHeaders().getOrDefault(CONTENT_TYPE, MediaType.APPLICATION_JSON);\n            final byte[] b;\n            if (MediaType.TEXT_PLAIN.equals(contentType) && data instanceof String) {\n                res.setContentType(MediaType.TEXT_PLAIN);\n                b = util.getUTF((String) data);\n            } else {\n                if (MediaType.APPLICATION_XML.equals(contentType)) {\n                    res.setContentType(MediaType.APPLICATION_XML);\n                    if (data instanceof Map) {\n                        b = util.getUTF(xml.write(data));\n                    } else {\n                        b = util.getUTF(data == null? \"\" : data.toString());\n                    }\n                } else {\n                    res.setContentType(MediaType.APPLICATION_JSON);\n                    if (data instanceof Map) {\n                        b = SimpleMapper.getInstance().getMapper().writeValueAsBytes(data);\n                    } else {\n                        b = util.getUTF(data == null? \"\" : data.toString());\n                    }\n                }\n            }\n            res.setContentLength(b.length);\n            try {\n                res.getOutputStream().write(b);\n            } catch (IOException e) {\n                log.error(\"Unable to send HTTP response\", e);\n            }\n            context.complete();\n        });\n        result.onFailure(ex -> {\n            HttpServletResponse res = (HttpServletResponse) context.getResponse();\n            res.setContentType(MediaType.APPLICATION_JSON);\n            try {\n                res.sendError(408, origin+\" timeout\");\n            } catch (IOException e) {\n                log.error(\"Unable to send HTTP response\", e);\n            }\n            context.complete();\n        });\n    }"
+            },
+            "calls": []
+          }
+        ]
+      },
+      {
+        "name": "put",
+        "class_name": "EventBlocks",
+        "package_name": "org.platformlambda.core.models",
+        "full_qualified_name": "org.platformlambda.core.models.EventBlocks.put",
+        "file_path": "C:\\Downloads\\mercury-main\\system\\platform-core\\src\\main\\java\\org\\platformlambda\\core\\models\\EventBlocks.java",
+        "location": {
+          "start_line": 36,
+          "end_line": 38
+        },
+        "parameters": [
+          "int n",
+          "byte block"
+        ],
+        "body": {
+          "lines": [
+            "    public void put(int n, byte[] block) {",
+            "        buffer.put(n, block);",
+            "    }"
+          ],
+          "full_text": "    public void put(int n, byte[] block) {\n        buffer.put(n, block);\n    }"
+        },
+        "calls": [
+          {
+            "name": "put",
+            "class_name": "EventBlocks",
+            "package_name": "org.platformlambda.core.models",
+            "full_qualified_name": "org.platformlambda.core.models.EventBlocks.put",
+            "file_path": "C:\\Downloads\\mercury-main\\system\\platform-core\\src\\main\\java\\org\\platformlambda\\core\\models\\EventBlocks.java",
+            "location": {
+              "start_line": 36,
+              "end_line": 38
+            },
+            "parameters": [
+              "int n",
+              "byte block"
+            ],
+            "body": {
+              "lines": [
+                "    public void put(int n, byte[] block) {",
+                "        buffer.put(n, block);",
+                "    }"
+              ],
+              "full_text": "    public void put(int n, byte[] block) {\n        buffer.put(n, block);\n    }"
+            },
+            "calls": []
+          }
+        ]
+      },
+      {
+        "name": "getInstance",
+        "class_name": "Platform",
+        "package_name": "org.platformlambda.core.system",
+        "full_qualified_name": "org.platformlambda.core.system.Platform.getInstance",
+        "file_path": "C:\\Downloads\\mercury-main\\system\\platform-core\\src\\main\\java\\org\\platformlambda\\core\\system\\Platform.java",
+        "location": {
+          "start_line": 73,
+          "end_line": 76
+        },
+        "parameters": [],
+        "body": {
+          "lines": [
+            "    public static Platform getInstance() {",
+            "        initialize();",
+            "        return INSTANCE;",
+            "    }"
+          ],
+          "full_text": "    public static Platform getInstance() {\n        initialize();\n        return INSTANCE;\n    }"
+        },
+        "calls": [
+          {
+            "name": "initialize",
+            "class_name": "Platform",
+            "package_name": "org.platformlambda.core.system",
+            "full_qualified_name": "org.platformlambda.core.system.Platform.initialize",
+            "file_path": "C:\\Downloads\\mercury-main\\system\\platform-core\\src\\main\\java\\org\\platformlambda\\core\\system\\Platform.java",
+            "location": {
+              "start_line": 78,
+              "end_line": 91
+            },
+            "parameters": [],
+            "body": {
+              "lines": [
+                "    private static void initialize() {",
+                "        if (initCounter.incrementAndGet() == 1) {",
+                "            AppConfigReader config = AppConfigReader.getInstance();",
+                "            int poolSize = Math.max(32, Utility.getInstance().str2int(config.getProperty(\"kernel.thread.pool\", \"100\")));",
+                "            system = Vertx.vertx().eventBus();",
+                "            vertx = Vertx.vertx();",
+                "            cache = SimpleCache.createCache(\"system.log.cache\", 30000);",
+                "            executor = Executors.newWorkStealingPool(poolSize);",
+                "            log.info(\"Event system started with up to {} kernel threads\", poolSize);",
+                "        }",
+                "        if (initCounter.get() > 10000) {",
+                "            initCounter.set(10);",
+                "        }",
+                "    }"
+              ],
+              "full_text": "    private static void initialize() {\n        if (initCounter.incrementAndGet() == 1) {\n            AppConfigReader config = AppConfigReader.getInstance();\n            int poolSize = Math.max(32, Utility.getInstance().str2int(config.getProperty(\"kernel.thread.pool\", \"100\")));\n            system = Vertx.vertx().eventBus();\n            vertx = Vertx.vertx();\n            cache = SimpleCache.createCache(\"system.log.cache\", 30000);\n            executor = Executors.newWorkStealingPool(poolSize);\n            log.info(\"Event system started with up to {} kernel threads\", poolSize);\n        }\n        if (initCounter.get() > 10000) {\n            initCounter.set(10);\n        }\n    }"
+            },
+            "calls": []
+          }
+        ]
+      },
+      {
+        "name": "waitForProvider",
+        "class_name": "Platform",
+        "package_name": "org.platformlambda.core.system",
+        "full_qualified_name": "org.platformlambda.core.system.Platform.waitForProvider",
+        "file_path": "C:\\Downloads\\mercury-main\\system\\platform-core\\src\\main\\java\\org\\platformlambda\\core\\system\\Platform.java",
+        "location": {
+          "start_line": 705,
+          "end_line": 707
+        },
+        "parameters": [
+          "String provider",
+          "int seconds"
+        ],
+        "body": {
+          "lines": [
+            "    public Future<Boolean> waitForProvider(String provider, int seconds) {",
+            "        return waitForProviders(Collections.singletonList(provider), seconds);",
+            "    }"
+          ],
+          "full_text": "    public Future<Boolean> waitForProvider(String provider, int seconds) {\n        return waitForProviders(Collections.singletonList(provider), seconds);\n    }"
+        },
+        "calls": [
+          {
+            "name": "waitForProviders",
+            "class_name": "Platform",
+            "package_name": "org.platformlambda.core.system",
+            "full_qualified_name": "org.platformlambda.core.system.Platform.waitForProviders",
+            "file_path": "C:\\Downloads\\mercury-main\\system\\platform-core\\src\\main\\java\\org\\platformlambda\\core\\system\\Platform.java",
+            "location": {
+              "start_line": 716,
+              "end_line": 725
+            },
+            "parameters": [
+              "List providers",
+              "int seconds"
+            ],
+            "body": {
+              "lines": [
+                "    public Future<Boolean> waitForProviders(List<String> providers, int seconds) {",
+                "        return Future.future(promise -> {",
+                "            if (hasRoute(providers)) {",
+                "                getEventExecutor().submit(() -> promise.complete(true));",
+                "            } else {",
+                "                getVertx().setTimer(2000, t ->",
+                "                        waitForProviders(promise, providers, 0, Math.max(2, seconds) / 2));",
+                "            }",
+                "        });",
+                "    }"
+              ],
+              "full_text": "    public Future<Boolean> waitForProviders(List<String> providers, int seconds) {\n        return Future.future(promise -> {\n            if (hasRoute(providers)) {\n                getEventExecutor().submit(() -> promise.complete(true));\n            } else {\n                getVertx().setTimer(2000, t ->\n                        waitForProviders(promise, providers, 0, Math.max(2, seconds) / 2));\n            }\n        });\n    }"
+            },
+            "calls": []
+          }
+        ]
+      },
+      {
+        "name": "registerPrivate",
+        "class_name": "Platform",
+        "package_name": "org.platformlambda.core.system",
+        "full_qualified_name": "org.platformlambda.core.system.Platform.registerPrivate",
+        "file_path": "C:\\Downloads\\mercury-main\\system\\platform-core\\src\\main\\java\\org\\platformlambda\\core\\system\\Platform.java",
+        "location": {
+          "start_line": 358,
+          "end_line": 360
+        },
+        "parameters": [
+          "String route",
+          "TypedLambdaFunction lambda",
+          "int instances"
+        ],
+        "body": {
+          "lines": [
+            "    public void registerPrivate(String route, TypedLambdaFunction lambda, int instances) throws IOException {",
+            "        register(route, lambda, true, instances);",
+            "    }"
+          ],
+          "full_text": "    public void registerPrivate(String route, TypedLambdaFunction lambda, int instances) throws IOException {\n        register(route, lambda, true, instances);\n    }"
+        },
+        "calls": [
+          {
+            "name": "register",
+            "class_name": "Platform",
+            "package_name": "org.platformlambda.core.system",
+            "full_qualified_name": "org.platformlambda.core.system.Platform.register",
+            "file_path": "C:\\Downloads\\mercury-main\\system\\platform-core\\src\\main\\java\\org\\platformlambda\\core\\system\\Platform.java",
+            "location": {
+              "start_line": 343,
+              "end_line": 345
+            },
+            "parameters": [
+              "String route",
+              "TypedLambdaFunction lambda",
+              "int instances"
+            ],
+            "body": {
+              "lines": [
+                "    public void register(String route, TypedLambdaFunction lambda, int instances) throws IOException {",
+                "        register(route, lambda, false, instances);",
+                "    }"
+              ],
+              "full_text": "    public void register(String route, TypedLambdaFunction lambda, int instances) throws IOException {\n        register(route, lambda, false, instances);\n    }"
+            },
+            "calls": []
+          }
+        ]
+      },
+      {
+        "name": "send",
+        "class_name": "PubSubManager",
+        "package_name": "org.platformlambda.hazelcast.services",
+        "full_qualified_name": "org.platformlambda.hazelcast.services.PubSubManager.send",
+        "file_path": "C:\\Downloads\\mercury-main\\connectors\\adapters\\hazelcast\\hazelcast-connector\\src\\main\\java\\org\\platformlambda\\hazelcast\\services\\PubSubManager.java",
+        "location": {
+          "start_line": 200,
+          "end_line": 202
+        },
+        "parameters": [
+          "String queue",
+          "Map headers",
+          "Object body"
+        ],
+        "body": {
+          "lines": [
+            "    public void send(String queue, Map<String, String> headers, Object body) throws IOException {",
+            "        throw new IOException(\"Not implemented\");",
+            "    }"
+          ],
+          "full_text": "    public void send(String queue, Map<String, String> headers, Object body) throws IOException {\n        throw new IOException(\"Not implemented\");\n    }"
+        },
+        "calls": []
+      },
+      {
+        "name": "size",
+        "class_name": "EventBlocks",
+        "package_name": "org.platformlambda.core.models",
+        "full_qualified_name": "org.platformlambda.core.models.EventBlocks.size",
+        "file_path": "C:\\Downloads\\mercury-main\\system\\platform-core\\src\\main\\java\\org\\platformlambda\\core\\models\\EventBlocks.java",
+        "location": {
+          "start_line": 44,
+          "end_line": 46
+        },
+        "parameters": [],
+        "body": {
+          "lines": [
+            "    public int size() {",
+            "        return buffer.size();",
+            "    }"
+          ],
+          "full_text": "    public int size() {\n        return buffer.size();\n    }"
+        },
+        "calls": [
+          {
+            "name": "size",
+            "class_name": "EventBlocks",
+            "package_name": "org.platformlambda.core.models",
+            "full_qualified_name": "org.platformlambda.core.models.EventBlocks.size",
+            "file_path": "C:\\Downloads\\mercury-main\\system\\platform-core\\src\\main\\java\\org\\platformlambda\\core\\models\\EventBlocks.java",
+            "location": {
+              "start_line": 44,
+              "end_line": 46
+            },
+            "parameters": [],
+            "body": {
+              "lines": [
+                "    public int size() {",
+                "        return buffer.size();",
+                "    }"
+              ],
+              "full_text": "    public int size() {\n        return buffer.size();\n    }"
+            },
+            "calls": []
+          }
+        ]
+      },
+      {
+        "name": "getValue",
+        "class_name": "OriginTrackedYamlLoader",
+        "package_name": "org.platformlambda.spring.patch",
+        "full_qualified_name": "org.platformlambda.spring.patch.OriginTrackedYamlLoader.getValue",
+        "file_path": "C:\\Downloads\\mercury-main\\system\\rest-spring-2\\src\\main\\java\\org\\platformlambda\\spring\\patch\\OriginTrackedYamlLoader.java",
+        "location": {
+          "start_line": 118,
+          "end_line": 120
+        },
+        "parameters": [
+          "Object value"
+        ],
+        "body": {
+          "lines": [
+            "        private Object getValue(Object value) {",
+            "            return (value != null) ? value : \"\";",
+            "        }"
+          ],
+          "full_text": "        private Object getValue(Object value) {\n            return (value != null) ? value : \"\";\n        }"
+        },
+        "calls": []
+      }
+    ]
+  },
+  "statistics": {
+    "total_methods_traced": 10,
+    "total_method_calls_found": 27,
+    "library_methods_skipped": 18,
+    "unique_files_involved": 9,
+    "unique_packages_involved": 5,
+    "calls_by_hop_level": {
+      "1": 9,
+      "2": 18
+    }
+  },
+  "library_methods_skipped": [
+    {
+      "method_name": "assertEquals",
+      "qualifier": "Assert",
+      "full_reference": "Assert.assertEquals",
+      "reason": "Not found in project index / treated as library method"
+    },
+    {
+      "method_name": "assertTrue",
+      "qualifier": "Assert",
+      "full_reference": "Assert.assertTrue",
+      "reason": "Not found in project index / treated as library method"
+    },
+    {
+      "method_name": "equals",
+      "qualifier": "Boolean.TRUE",
+      "full_reference": "Boolean.TRUE.equals",
+      "reason": "Not found in project index / treated as library method"
+    },
+    {
+      "method_name": "singletonList",
+      "qualifier": "Collections",
+      "full_reference": "Collections.singletonList",
+      "reason": "Not found in project index / treated as library method"
+    },
+    {
+      "method_name": "equals",
+      "qualifier": "DATA",
+      "full_reference": "DATA.equals",
+      "reason": "Not found in project index / treated as library method"
+    },
+    {
+      "method_name": "equals",
+      "qualifier": "END_OF_STREAM",
+      "full_reference": "END_OF_STREAM.equals",
+      "reason": "Not found in project index / treated as library method"
+    },
+    {
+      "method_name": "future",
+      "qualifier": "Future",
+      "full_reference": "Future.future",
+      "reason": "Not found in project index / treated as library method"
+    },
+    {
+      "method_name": "poll",
+      "qualifier": "bench",
+      "full_reference": "bench.poll",
+      "reason": "Not found in project index / treated as library method"
+    },
+    {
+      "method_name": "offer",
+      "qualifier": "completion",
+      "full_reference": "completion.offer",
+      "reason": "Not found in project index / treated as library method"
+    },
+    {
+      "method_name": "poll",
+      "qualifier": "completion",
+      "full_reference": "completion.poll",
+      "reason": "Not found in project index / treated as library method"
+    },
+    {
+      "method_name": "incrementAndGet",
+      "qualifier": "counter",
+      "full_reference": "counter.incrementAndGet",
+      "reason": "Not found in project index / treated as library method"
+    },
+    {
+      "method_name": "getKey",
+      "qualifier": "kv",
+      "full_reference": "kv.getKey",
+      "reason": "Not found in project index / treated as library method"
+    },
+    {
+      "method_name": "info",
+      "qualifier": "log",
+      "full_reference": "log.info",
+      "reason": "Not found in project index / treated as library method"
+    },
+    {
+      "method_name": "onFailure",
+      "qualifier": null,
+      "full_reference": "onFailure",
+      "reason": "Not found in project index / treated as library method"
+    },
+    {
+      "method_name": "onSuccess",
+      "qualifier": null,
+      "full_reference": "onSuccess",
+      "reason": "Not found in project index / treated as library method"
+    },
+    {
+      "method_name": "complete",
+      "qualifier": "promise",
+      "full_reference": "promise.complete",
+      "reason": "Not found in project index / treated as library method"
+    },
+    {
+      "method_name": "fail",
+      "qualifier": "promise",
+      "full_reference": "promise.fail",
+      "reason": "Not found in project index / treated as library method"
+    },
+    {
+      "method_name": "entrySet",
+      "qualifier": "result",
+      "full_reference": "result.entrySet",
+      "reason": "Not found in project index / treated as library method"
+    }
+  ],
+  "files_analyzed": [
+    {
+      "file_path": "C:\\Downloads\\mercury-main\\connectors\\adapters\\hazelcast\\hazelcast-connector\\src\\main\\java\\org\\platformlambda\\hazelcast\\services\\PubSubManager.java",
+      "package_name": "org.platformlambda.hazelcast.services",
+      "methods_found": 1,
+      "role": "dependency"
+    },
+    {
+      "file_path": "C:\\Downloads\\mercury-main\\system\\platform-core\\src\\main\\java\\org\\platformlambda\\core\\models\\AsyncHttpRequest.java",
+      "package_name": "org.platformlambda.core.models",
+      "methods_found": 3,
+      "role": "dependency"
+    },
+    {
+      "file_path": "C:\\Downloads\\mercury-main\\system\\platform-core\\src\\main\\java\\org\\platformlambda\\core\\models\\EventBlocks.java",
+      "package_name": "org.platformlambda.core.models",
+      "methods_found": 4,
+      "role": "dependency"
+    },
+    {
+      "file_path": "C:\\Downloads\\mercury-main\\system\\platform-core\\src\\main\\java\\org\\platformlambda\\core\\models\\EventEnvelope.java",
+      "package_name": "org.platformlambda.core.models",
+      "methods_found": 1,
+      "role": "dependency"
+    },
+    {
+      "file_path": "C:\\Downloads\\mercury-main\\system\\platform-core\\src\\main\\java\\org\\platformlambda\\core\\system\\AsyncObjectStreamReader.java",
+      "package_name": "org.platformlambda.core.system",
+      "methods_found": 3,
+      "role": "dependency"
+    },
+    {
+      "file_path": "C:\\Downloads\\mercury-main\\system\\platform-core\\src\\main\\java\\org\\platformlambda\\core\\system\\EventEmitter.java",
+      "package_name": "org.platformlambda.core.system",
+      "methods_found": 3,
+      "role": "dependency"
+    },
+    {
+      "file_path": "C:\\Downloads\\mercury-main\\system\\platform-core\\src\\main\\java\\org\\platformlambda\\core\\system\\Platform.java",
+      "package_name": "org.platformlambda.core.system",
+      "methods_found": 9,
+      "role": "dependency"
+    },
+    {
+      "file_path": "C:\\Downloads\\mercury-main\\system\\platform-core\\src\\test\\java\\org\\platformlambda\\core\\MulticastTest.java",
+      "package_name": "org.platformlambda.core",
+      "methods_found": 1,
+      "role": "test"
+    },
+    {
+      "file_path": "C:\\Downloads\\mercury-main\\system\\rest-spring-2\\src\\main\\java\\org\\platformlambda\\servlets\\ServletBase.java",
+      "package_name": "org.platformlambda.servlets",
+      "methods_found": 2,
+      "role": "dependency"
+    },
+    {
+      "file_path": "C:\\Downloads\\mercury-main\\system\\rest-spring-2\\src\\main\\java\\org\\platformlambda\\spring\\patch\\OriginTrackedYamlLoader.java",
+      "package_name": "org.platformlambda.spring.patch",
+      "methods_found": 1,
+      "role": "dependency"
+    }
+  ],
+  "packages_involved": [
+    {
+      "package_name": "org.platformlambda.core",
+      "files_count": 1,
+      "methods_count": 1
+    },
+    {
+      "package_name": "org.platformlambda.core.models",
+      "files_count": 3,
+      "methods_count": 8
+    },
+    {
+      "package_name": "org.platformlambda.core.system",
+      "files_count": 3,
+      "methods_count": 15
+    },
+    {
+      "package_name": "org.platformlambda.hazelcast.services",
+      "files_count": 1,
+      "methods_count": 1
+    },
+    {
+      "package_name": "org.platformlambda.servlets",
+      "files_count": 1,
+      "methods_count": 2
+    },
+    {
+      "package_name": "org.platformlambda.spring.patch",
+      "files_count": 1,
+      "methods_count": 1
+    }
+  ]
+}

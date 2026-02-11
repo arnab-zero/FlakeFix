@@ -330,7 +330,7 @@ class JavaMethodAnalyzer:
         
         return None
     
-    def analyze_test_method(self, test_file_path: str, test_method_name: str, 
+    def analyze_test_method_internal(self, test_file_path: str, test_method_name: str, 
                            max_hops: int = 2) -> Dict:
         """Analyze a test method and trace calls up to max_hops deep, ignoring library methods"""
         
@@ -733,6 +733,93 @@ class JavaMethodAnalyzer:
         print(f"\n✅ Saved analysis JSON to: {output_path}\n")
 
 
+def analyze_test_method(project_root: str, test_file_path: str, test_method_name: str, 
+                        max_hops: int = 2) -> Tuple[Dict, str]:
+    
+    """
+    Entrypoint function: Analyze a test method and generate JSON with 2-hop call graph.
+    
+    Args:
+        project_root: Path to Java project root directory
+        test_file_path: Path to test file (absolute or relative to project_root)
+        test_method_name: Name of the test method to analyze
+        max_hops: Maximum call depth to trace (default: 2)
+        
+    Returns:
+        Tuple of (json_dict, saved_file_path)
+        - json_dict: The analysis results as a dictionary
+        - saved_file_path: Path where the JSON file was saved
+        
+    Example:
+        json_data, file_path = analyze_test_method(
+            "/path/to/project",
+            "src/test/java/MyTest.java",
+            "testMyFeature"
+        )
+    """
+
+    # Make test_file_path absolute if it's relative to project root
+    if not os.path.isabs(test_file_path):
+        test_file_path = os.path.join(project_root, test_file_path)
+    
+    # Initialize analyzer
+    analyzer = JavaMethodAnalyzer(project_root)
+    
+    # Analyze the test method
+    results = analyzer.analyze_test_method_internal(test_file_path, test_method_name, max_hops=max_hops)
+    
+    # Handle errors
+    if "error" in results:
+        error_json = {"error": results["error"]}
+        return error_json, ""
+    
+    # Extract test class name for filename
+    test_method_info: MethodInfo = results["test_method"]
+    test_class_name = test_method_info.class_name
+    
+    # Create output directory
+    output_dir = Path("./method-analysis-output")
+    output_dir.mkdir(exist_ok=True)
+    
+    # Generate filename: {testClassName}_{testMethodName}_invoked_methods_analysis.json
+    output_filename = f"{test_class_name}_{test_method_name}_invoked_methods_analysis.json"
+    output_path = output_dir / output_filename
+    
+    # Build JSON payload
+    calls: List[MethodCall] = results.get("calls", [])
+    library_methods = results.get("library_methods_skipped", set())
+    
+    analysis_payload = {
+        "analysis_metadata": {
+            "analyzer_version": "1.0.0",
+            "analysis_timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+            "project_root": str(Path(project_root).resolve()),
+            "max_hops": max_hops
+        },
+        "test_method": {
+            **analyzer._methodinfo_to_json(test_method_info),
+            "full_qualified_name": test_method_info.full_name,
+            "calls": analyzer._build_call_tree(results)
+        },
+        "statistics": analyzer._compute_stats(results, max_hops=max_hops),
+        "library_methods_skipped": analyzer._library_methods_to_json(library_methods),
+        "files_analyzed": analyzer._files_analyzed_to_json(test_method_info, calls),
+        "packages_involved": analyzer._packages_involved_to_json(test_method_info, calls)
+    }
+    
+    # Ensure required fields
+    analysis_payload["test_method"]["package_name"] = analysis_payload["test_method"].get("package_name", "")
+    analysis_payload["test_method"]["parameters"] = analysis_payload["test_method"].get("parameters", [])
+    
+    # Save to file
+    with open(output_path, "w", encoding="utf-8") as f:
+        json.dump(analysis_payload, f, indent=2)
+    
+    print(f"\n✅ Saved analysis JSON to: {output_path}\n")
+    
+    return analysis_payload, str(output_path)
+
+
 def main():
     """Main function for command-line usage"""
     if len(sys.argv) < 4:
@@ -748,29 +835,12 @@ def main():
     test_file_path = sys.argv[2]
     test_method_name = sys.argv[3]
     
-    # Make test_file_path absolute if it's relative to project root
-    if not os.path.isabs(test_file_path):
-        test_file_path = os.path.join(project_root, test_file_path)
+    # Use the entrypoint function
+    json_data, saved_path = analyze_test_method(project_root, test_file_path, test_method_name)
     
-    # Initialize analyzer
-    analyzer = JavaMethodAnalyzer(project_root)
-    
-    # Analyze the test method
-    results = analyzer.analyze_test_method(test_file_path, test_method_name, max_hops=2)
-    
-    # Print results
-    # analyzer.print_results(results)
-
-    # Save JSON results (instead of printing)
-    out_file = os.path.join(os.getcwd(), f"{test_method_name}_call_analysis.json")
-    analyzer.save_results_json(
-        results=results,
-        output_path=out_file,
-        test_file_path=test_file_path,
-        test_method_name=test_method_name,
-        max_hops=2,
-        analyzer_version="1.0.0"
-    )
+    if "error" in json_data:
+        print(f"\n❌ Error: {json_data['error']}\n")
+        sys.exit(1)
 
 
 
