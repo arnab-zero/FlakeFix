@@ -1,0 +1,3331 @@
+====================================================================================================
+Enhanced Method Inliner Log - 2026-02-12 15:34:51
+====================================================================================================
+Model: qwen3-coder:480b-cloud
+Max Retries: 2
+====================================================================================================
+
+Inliner initialized successfully
+
+
+====================================================================================================
+STARTING INLINING PROCESS
+====================================================================================================
+  Test method: org.platformlambda.core.MulticastTest.routingTest
+  Test method calls 9 hop-1 methods
+  Total hop-1 methods: 9
+  Total hop-2 methods: 15
+
+
+====================================================================================================
+PHASE 1: Inlining Hop-2 into Hop-1 Method: org.platformlambda.core.system.EventEmitter.getInstance
+====================================================================================================
+  No hop-2 methods to inline (or all are recursive)
+
+====================================================================================================
+PHASE 1: Inlining Hop-2 into Hop-1 Method: org.platformlambda.core.system.AsyncObjectStreamReader.get
+====================================================================================================
+  Found 9 hop-2 methods to inline:
+    - org.platformlambda.core.system.EventEmitter.getInstance
+    - org.platformlambda.core.system.Platform.getInstance
+    - org.platformlambda.core.system.Platform.getEventExecutor
+    - org.platformlambda.servlets.ServletBase.submit
+    - org.platformlambda.core.models.EventEnvelope.setTo
+    - org.platformlambda.core.models.AsyncHttpRequest.setHeader
+    - org.platformlambda.core.system.EventEmitter.asyncRequest
+    - org.platformlambda.core.models.AsyncHttpRequest.getHeaders
+    - org.platformlambda.core.models.AsyncHttpRequest.getBody
+
+
+--------------------------------------------------------------------------------
+Inlining: org.platformlambda.core.system.EventEmitter.getInstance
+--------------------------------------------------------------------------------
+  Original caller body:
+        public Future<Object> get() {
+        final EventEmitter po = EventEmitter.getInstance();
+        return Future.future(promise -> {
+            Platform platform = Platform.getInstance();
+            if (eof || closed) {
+                platform.getEventExecutor().submit(() -> promise.complete(null));
+            } else {
+                EventEnvelope request = new EventEnvelope().setTo(streamId).setHeader(TYPE, READ);
+                try {
+                    po.asyncRequest(request, timeout)
+                            .onSuccess(event -> {
+                                Map<String, String> headers = event.getHeaders();
+                                if (DATA.equals(headers.get(TYPE))) {
+                                    promise.complete(event.getBody());
+                                }
+                                if (END_OF_STREAM.equals(headers.get(TYPE))) {
+                                    eof = true;
+                                    promise.complete(null);
+                                }
+                            })
+                            .onFailure(promise::fail);
+
+                } catch (IOException e) {
+                    platform.getEventExecutor().submit(() -> promise.fail(e));
+                }
+            }
+        });
+    }
+
+  Callee body to inline:
+        public static EventEmitter getInstance() {
+        return INSTANCE;
+    }
+
+  Attempt 1/3
+  Calling Ollama for: initial inlining
+    Prompt length: 3118 chars
+    Attempt 1/3
+    ✓ Response received: 1282 chars
+    Extracting code from response
+      Removed ```java``` markers
+      Extracted code: 1266 chars
+    Inlined code:
+      public Future<Object> get() {
+        final EventEmitter po = INSTANCE;
+        return Future.future(promise -> {
+            Platform platform = Platform.getInstance();
+            if (eof || closed) {
+                platform.getEventExecutor().submit(() -> promise.complete(null));
+            } else {
+                EventEnvelope request = new EventEnvelope().setTo(streamId).setHeader(TYPE, READ);
+                try {
+                    po.asyncRequest(request, timeout)
+                            .onSuccess(event -> {
+                                Map<String, String> headers = event.getHeaders();
+                                if (DATA.equals(headers.get(TYPE))) {
+                                    promise.complete(event.getBody());
+                                }
+                                if (END_OF_STREAM.equals(headers.get(TYPE))) {
+                                    eof = true;
+                                    promise.complete(null);
+                                }
+                            })
+                            .onFailure(promise::fail);
+
+                } catch (IOException e) {
+                    platform.getEventExecutor().submit(() -> promise.fail(e));
+                }
+            }
+        });
+    }
+
+
+>>> Consistency Check
+  Calling Ollama for: consistency check
+    Prompt length: 12429 chars
+    Attempt 1/3
+    ✓ Response received: 878 chars
+    Consistency: False
+    Signature preserved: True
+    Problems found: 3
+      1. The inlined version omits the call to Platform.initialize() which was present in the original method through Platform.getInstance(). This may lead to different behavior if initialization side effects are required.
+      2. The variable 'platform' is assigned the result of Platform.getInstance() but it's not used consistently throughout the method after inlining. In the original, it was used for getting the event executor, but in the inlined version, this usage remains unchanged, so technically it's fine, but could be further simplified.
+      3. Inlining of po.asyncRequest(request, timeout) retains a complex method that wasn't fully expanded inline; however, since asyncRequest is large and involves lambdas and futures, this is acceptable per typical inlining rules.
+    ✗ Consistency check failed
+      - Will retry with rewrite prompt
+  Attempt 2/3
+  Calling Ollama for: rewrite attempt 1
+    Prompt length: 12973 chars
+    Attempt 1/3
+    ✓ Response received: 1279 chars
+    Extracting code from response
+      Removed ```java``` markers
+      Extracted code: 1267 chars
+    Inlined code:
+      public Future<Object> get() {
+        final EventEmitter po = INSTANCE;
+        return Future.future(promise -> {
+            Platform.initialize();
+            Platform platform = INSTANCE;
+            if (eof || closed) {
+                platform.executor.submit(() -> promise.complete(null));
+            } else {
+                EventEnvelope request = new EventEnvelope().setTo(streamId).setHeader(TYPE, READ);
+                try {
+                    po.asyncRequest(request, timeout)
+                            .onSuccess(event -> {
+                                Map<String, String> headers = event.getHeaders();
+                                if (DATA.equals(headers.get(TYPE))) {
+                                    promise.complete(event.getBody());
+                                }
+                                if (END_OF_STREAM.equals(headers.get(TYPE))) {
+                                    eof = true;
+                                    promise.complete(null);
+                                }
+                            })
+                            .onFailure(promise::fail);
+
+                } catch (IOException e) {
+                    platform.executor.submit(() -> promise.fail(e));
+                }
+            }
+        });
+    }
+
+
+>>> Consistency Check
+  Calling Ollama for: consistency check
+    Prompt length: 12430 chars
+    Attempt 1/3
+    ✓ Response received: 533 chars
+    Consistency: False
+    Signature preserved: True
+    Problems found: 4
+      1. Missing import or inline for 'Future.future' method which is used but not defined in the provided context
+      2. The variable 'timeout' is used but not declared or passed as a parameter in the inlined version
+      3. The constants 'TYPE', 'READ', 'DATA', and 'END_OF_STREAM' are referenced but not defined or inlined
+      4. The fields 'eof' and 'closed' are referenced but not declared or initialized in the inlined version
+    ✗ Consistency check failed
+      - Will retry with rewrite prompt
+  Attempt 3/3
+  Calling Ollama for: rewrite attempt 2
+    Prompt length: 12620 chars
+    Attempt 1/3
+    ✓ Response received: 1205 chars
+    Extracting code from response
+      Removed ```java``` markers
+      Extracted code: 1193 chars
+    Inlined code:
+      public Future<Object> get() {
+    final EventEmitter po = EventEmitter.INSTANCE;
+    return Future.future(promise -> {
+        Platform.initialize();
+        Platform platform = Platform.INSTANCE;
+        if (eof || closed) {
+            platform.executor.submit(() -> promise.complete(null));
+        } else {
+            EventEnvelope request = new EventEnvelope().setTo(streamId).setHeader("type", "read");
+            try {
+                po.asyncRequest(request, timeout)
+                        .onSuccess(event -> {
+                            Map<String, String> headers = event.getHeaders();
+                            if ("data".equals(headers.get("type"))) {
+                                promise.complete(event.getBody());
+                            }
+                            if ("end_of_stream".equals(headers.get("type"))) {
+                                eof = true;
+                                promise.complete(null);
+                            }
+                        })
+                        .onFailure(promise::fail);
+
+            } catch (IOException e) {
+                platform.executor.submit(() -> promise.fail(e));
+            }
+        }
+    });
+}
+
+
+>>> Consistency Check
+  Calling Ollama for: consistency check
+    Prompt length: 12356 chars
+    Attempt 1/3
+    ✓ Response received: 82 chars
+    Consistency: True
+    Signature preserved: True
+    No problems found
+    ✓ Consistency check passed
+  ✓ Successfully inlined org.platformlambda.core.system.EventEmitter.getInstance
+
+--------------------------------------------------------------------------------
+Inlining: org.platformlambda.core.system.Platform.getInstance
+--------------------------------------------------------------------------------
+  Original caller body:
+    public Future<Object> get() {
+    final EventEmitter po = EventEmitter.INSTANCE;
+    return Future.future(promise -> {
+        Platform.initialize();
+        Platform platform = Platform.INSTANCE;
+        if (eof || closed) {
+            platform.executor.submit(() -> promise.complete(null));
+        } else {
+            EventEnvelope request = new EventEnvelope().setTo(streamId).setHeader("type", "read");
+            try {
+                po.asyncRequest(request, timeout)
+                        .onSuccess(event -> {
+                            Map<String, String> headers = event.getHeaders();
+                            if ("data".equals(headers.get("type"))) {
+                                promise.complete(event.getBody());
+                            }
+                            if ("end_of_stream".equals(headers.get("type"))) {
+                                eof = true;
+                                promise.complete(null);
+                            }
+                        })
+                        .onFailure(promise::fail);
+
+            } catch (IOException e) {
+                platform.executor.submit(() -> promise.fail(e));
+            }
+        }
+    });
+}
+
+  Callee body to inline:
+        public static Platform getInstance() {
+        initialize();
+        return INSTANCE;
+    }
+
+  Attempt 1/3
+  Calling Ollama for: initial inlining
+    Prompt length: 3037 chars
+    Attempt 1/3
+    ✓ Response received: 1205 chars
+    Extracting code from response
+      Removed ```java``` markers
+      Extracted code: 1193 chars
+    Inlined code:
+      public Future<Object> get() {
+    final EventEmitter po = EventEmitter.INSTANCE;
+    return Future.future(promise -> {
+        Platform.initialize();
+        Platform platform = Platform.INSTANCE;
+        if (eof || closed) {
+            platform.executor.submit(() -> promise.complete(null));
+        } else {
+            EventEnvelope request = new EventEnvelope().setTo(streamId).setHeader("type", "read");
+            try {
+                po.asyncRequest(request, timeout)
+                        .onSuccess(event -> {
+                            Map<String, String> headers = event.getHeaders();
+                            if ("data".equals(headers.get("type"))) {
+                                promise.complete(event.getBody());
+                            }
+                            if ("end_of_stream".equals(headers.get("type"))) {
+                                eof = true;
+                                promise.complete(null);
+                            }
+                        })
+                        .onFailure(promise::fail);
+
+            } catch (IOException e) {
+                platform.executor.submit(() -> promise.fail(e));
+            }
+        }
+    });
+}
+
+
+>>> Consistency Check
+  Calling Ollama for: consistency check
+    Prompt length: 12261 chars
+    Attempt 1/3
+    ✓ Response received: 82 chars
+    Consistency: True
+    Signature preserved: True
+    No problems found
+    ✓ Consistency check passed
+  ✓ Successfully inlined org.platformlambda.core.system.Platform.getInstance
+
+--------------------------------------------------------------------------------
+Inlining: org.platformlambda.core.system.Platform.getEventExecutor
+--------------------------------------------------------------------------------
+  Original caller body:
+    public Future<Object> get() {
+    final EventEmitter po = EventEmitter.INSTANCE;
+    return Future.future(promise -> {
+        Platform.initialize();
+        Platform platform = Platform.INSTANCE;
+        if (eof || closed) {
+            platform.executor.submit(() -> promise.complete(null));
+        } else {
+            EventEnvelope request = new EventEnvelope().setTo(streamId).setHeader("type", "read");
+            try {
+                po.asyncRequest(request, timeout)
+                        .onSuccess(event -> {
+                            Map<String, String> headers = event.getHeaders();
+                            if ("data".equals(headers.get("type"))) {
+                                promise.complete(event.getBody());
+                            }
+                            if ("end_of_stream".equals(headers.get("type"))) {
+                                eof = true;
+                                promise.complete(null);
+                            }
+                        })
+                        .onFailure(promise::fail);
+
+            } catch (IOException e) {
+                platform.executor.submit(() -> promise.fail(e));
+            }
+        }
+    });
+}
+
+  Callee body to inline:
+        public ExecutorService getEventExecutor() {
+        return executor;
+    }
+
+  Attempt 1/3
+  Calling Ollama for: initial inlining
+    Prompt length: 3030 chars
+    Attempt 1/3
+    ✓ Response received: 1187 chars
+    Extracting code from response
+      Removed ```java``` markers
+      Extracted code: 1175 chars
+    Inlined code:
+      public Future<Object> get() {
+    final EventEmitter po = EventEmitter.INSTANCE;
+    return Future.future(promise -> {
+        Platform.initialize();
+        Platform platform = Platform.INSTANCE;
+        if (eof || closed) {
+            executor.submit(() -> promise.complete(null));
+        } else {
+            EventEnvelope request = new EventEnvelope().setTo(streamId).setHeader("type", "read");
+            try {
+                po.asyncRequest(request, timeout)
+                        .onSuccess(event -> {
+                            Map<String, String> headers = event.getHeaders();
+                            if ("data".equals(headers.get("type"))) {
+                                promise.complete(event.getBody());
+                            }
+                            if ("end_of_stream".equals(headers.get("type"))) {
+                                eof = true;
+                                promise.complete(null);
+                            }
+                        })
+                        .onFailure(promise::fail);
+
+            } catch (IOException e) {
+                executor.submit(() -> promise.fail(e));
+            }
+        }
+    });
+}
+
+
+>>> Consistency Check
+  Calling Ollama for: consistency check
+    Prompt length: 12243 chars
+    Attempt 1/3
+    ✓ Response received: 707 chars
+    Consistency: False
+    Signature preserved: True
+    Problems found: 3
+      1. Inlined version incorrectly replaces `Platform.getInstance()` call with direct field access, but fails to inline the `initialize();` side effect that occurs in `Platform.getInstance()`.
+      2. The inlined version removes the qualified reference `platform.executor` and directly uses `executor`, which may lead to a compilation error if `executor` is not a visible field or variable in scope.
+      3. `EventEmitter.getInstance()` was replaced with direct field access to `EventEmitter.INSTANCE`, which is correct assuming `INSTANCE` is accessible, but should be verified for visibility and correctness.
+    ✗ Consistency check failed
+      - Will retry with rewrite prompt
+  Attempt 2/3
+  Calling Ollama for: rewrite attempt 1
+    Prompt length: 12616 chars
+    Attempt 1/3
+    ✓ Response received: 1205 chars
+    Extracting code from response
+      Removed ```java``` markers
+      Extracted code: 1193 chars
+    Inlined code:
+      public Future<Object> get() {
+    final EventEmitter po = EventEmitter.INSTANCE;
+    return Future.future(promise -> {
+        Platform.initialize();
+        Platform platform = Platform.INSTANCE;
+        if (eof || closed) {
+            platform.executor.submit(() -> promise.complete(null));
+        } else {
+            EventEnvelope request = new EventEnvelope().setTo(streamId).setHeader("type", "read");
+            try {
+                po.asyncRequest(request, timeout)
+                        .onSuccess(event -> {
+                            Map<String, String> headers = event.getHeaders();
+                            if ("data".equals(headers.get("type"))) {
+                                promise.complete(event.getBody());
+                            }
+                            if ("end_of_stream".equals(headers.get("type"))) {
+                                eof = true;
+                                promise.complete(null);
+                            }
+                        })
+                        .onFailure(promise::fail);
+
+            } catch (IOException e) {
+                platform.executor.submit(() -> promise.fail(e));
+            }
+        }
+    });
+}
+
+
+>>> Consistency Check
+  Calling Ollama for: consistency check
+    Prompt length: 12261 chars
+    Attempt 1/3
+    ✓ Response received: 82 chars
+    Consistency: True
+    Signature preserved: True
+    No problems found
+    ✓ Consistency check passed
+  ✓ Successfully inlined org.platformlambda.core.system.Platform.getEventExecutor
+
+--------------------------------------------------------------------------------
+Inlining: org.platformlambda.servlets.ServletBase.submit
+--------------------------------------------------------------------------------
+  Original caller body:
+    public Future<Object> get() {
+    final EventEmitter po = EventEmitter.INSTANCE;
+    return Future.future(promise -> {
+        Platform.initialize();
+        Platform platform = Platform.INSTANCE;
+        if (eof || closed) {
+            platform.executor.submit(() -> promise.complete(null));
+        } else {
+            EventEnvelope request = new EventEnvelope().setTo(streamId).setHeader("type", "read");
+            try {
+                po.asyncRequest(request, timeout)
+                        .onSuccess(event -> {
+                            Map<String, String> headers = event.getHeaders();
+                            if ("data".equals(headers.get("type"))) {
+                                promise.complete(event.getBody());
+                            }
+                            if ("end_of_stream".equals(headers.get("type"))) {
+                                eof = true;
+                                promise.complete(null);
+                            }
+                        })
+                        .onFailure(promise::fail);
+
+            } catch (IOException e) {
+                platform.executor.submit(() -> promise.fail(e));
+            }
+        }
+    });
+}
+
+  Callee body to inline:
+        protected void submit(String type, HttpServletRequest request, HttpServletResponse response) throws IOException {
+        final String myOrigin = Platform.getInstance().getOrigin();
+        final String appOrigin = request.getHeader(APP_INSTANCE);
+        if (appOrigin == null) {
+            if (protectEndpoint && !isIntranetAddress(request)) {
+                response.sendError(404, "Resource not found");
+                return;
+            }
+        }
+        final String origin = appOrigin == null? myOrigin : appOrigin;
+        EventEmitter po = EventEmitter.getInstance();
+        EventEnvelope event = new EventEnvelope().setHeader(TYPE, type);
+        String accept = request.getHeader(ACCEPT);
+        event.setHeader(ACCEPT_CONTENT, accept != null? accept : MediaType.APPLICATION_JSON);
+        if (origin.equals(myOrigin)) {
+            event.setTo(EventEmitter.ACTUATOR_SERVICES);
+        } else {
+            if (!po.exists(origin)) {
+                response.sendError(404, origin+" is not reachable");
+                return;
+            }
+            event.setTo(EventEmitter.ACTUATOR_SERVICES+"@"+origin);
+        }
+        AsyncContext context = request.startAsync();
+        Future<EventEnvelope> result = po.asyncRequest(event, 10000);
+        result.onSuccess(evt -> {
+            Utility util = Utility.getInstance();
+            HttpServletResponse res = (HttpServletResponse) context.getResponse();
+            res.setStatus(evt.getStatus());
+            final Object data = evt.getRawBody();
+            final String contentType = evt.getHeaders().getOrDefault(CONTENT_TYPE, MediaType.APPLICATION_JSON);
+            final byte[] b;
+            if (MediaType.TEXT_PLAIN.equals(contentType) && data instanceof String) {
+                res.setContentType(MediaType.TEXT_PLAIN);
+                b = util.getUTF((String) data);
+            } else {
+                if (MediaType.APPLICATION_XML.equals(contentType)) {
+                    res.setContentType(MediaType.APPLICATION_XML);
+                    if (data instanceof Map) {
+                        b = util.getUTF(xml.write(data));
+                    } else {
+                        b = util.getUTF(data == null? "" : data.toString());
+                    }
+                } else {
+                    res.setContentType(MediaType.APPLICATION_JSON);
+                    if (data instanceof Map) {
+                        b = SimpleMapper.getInstance().getMapper().writeValueAsBytes(data);
+                    } else {
+                        b = util.getUTF(data == null? "" : data.toString());
+                    }
+                }
+            }
+            res.setContentLength(b.length);
+            try {
+                res.getOutputStream().write(b);
+            } catch (IOException e) {
+                log.error("Unable to send HTTP response", e);
+            }
+            context.complete();
+        });
+        result.onFailure(ex -> {
+            HttpServletResponse res = (HttpServletResponse) context.getResponse();
+            res.setContentType(MediaType.APPLICATION_JSON);
+            try {
+                res.sendError(408, origin+" timeout");
+            } catch (IOException e) {
+                log.error("Unable to send HTTP response", e);
+            }
+            context.complete();
+        });
+    }
+
+  Attempt 1/3
+  Calling Ollama for: initial inlining
+    Prompt length: 6251 chars
+    Attempt 1/3
+    ✓ Response received: 1205 chars
+    Extracting code from response
+      Removed ```java``` markers
+      Extracted code: 1193 chars
+    Inlined code:
+      public Future<Object> get() {
+    final EventEmitter po = EventEmitter.INSTANCE;
+    return Future.future(promise -> {
+        Platform.initialize();
+        Platform platform = Platform.INSTANCE;
+        if (eof || closed) {
+            platform.executor.submit(() -> promise.complete(null));
+        } else {
+            EventEnvelope request = new EventEnvelope().setTo(streamId).setHeader("type", "read");
+            try {
+                po.asyncRequest(request, timeout)
+                        .onSuccess(event -> {
+                            Map<String, String> headers = event.getHeaders();
+                            if ("data".equals(headers.get("type"))) {
+                                promise.complete(event.getBody());
+                            }
+                            if ("end_of_stream".equals(headers.get("type"))) {
+                                eof = true;
+                                promise.complete(null);
+                            }
+                        })
+                        .onFailure(promise::fail);
+
+            } catch (IOException e) {
+                platform.executor.submit(() -> promise.fail(e));
+            }
+        }
+    });
+}
+
+
+>>> Consistency Check
+  Calling Ollama for: consistency check
+    Prompt length: 12261 chars
+    Attempt 1/3
+    ✓ Response received: 82 chars
+    Consistency: True
+    Signature preserved: True
+    No problems found
+    ✓ Consistency check passed
+  ✓ Successfully inlined org.platformlambda.servlets.ServletBase.submit
+
+--------------------------------------------------------------------------------
+Inlining: org.platformlambda.core.models.EventEnvelope.setTo
+--------------------------------------------------------------------------------
+  Original caller body:
+    public Future<Object> get() {
+    final EventEmitter po = EventEmitter.INSTANCE;
+    return Future.future(promise -> {
+        Platform.initialize();
+        Platform platform = Platform.INSTANCE;
+        if (eof || closed) {
+            platform.executor.submit(() -> promise.complete(null));
+        } else {
+            EventEnvelope request = new EventEnvelope().setTo(streamId).setHeader("type", "read");
+            try {
+                po.asyncRequest(request, timeout)
+                        .onSuccess(event -> {
+                            Map<String, String> headers = event.getHeaders();
+                            if ("data".equals(headers.get("type"))) {
+                                promise.complete(event.getBody());
+                            }
+                            if ("end_of_stream".equals(headers.get("type"))) {
+                                eof = true;
+                                promise.complete(null);
+                            }
+                        })
+                        .onFailure(promise::fail);
+
+            } catch (IOException e) {
+                platform.executor.submit(() -> promise.fail(e));
+            }
+        }
+    });
+}
+
+  Callee body to inline:
+        public EventEnvelope setTo(String to) {
+        this.to = to;
+        return this;
+    }
+
+  Attempt 1/3
+  Calling Ollama for: initial inlining
+    Prompt length: 3027 chars
+    Attempt 1/3
+    ✓ Response received: 1255 chars
+    Extracting code from response
+      Removed ```java``` markers
+      Extracted code: 1243 chars
+    Inlined code:
+      public Future<Object> get() {
+    final EventEmitter po = EventEmitter.INSTANCE;
+    return Future.future(promise -> {
+        Platform.initialize();
+        Platform platform = Platform.INSTANCE;
+        if (eof || closed) {
+            platform.executor.submit(() -> promise.complete(null));
+        } else {
+            EventEnvelope request = new EventEnvelope();
+            request.to = streamId;
+            request = request.setHeader("type", "read");
+            try {
+                po.asyncRequest(request, timeout)
+                        .onSuccess(event -> {
+                            Map<String, String> headers = event.getHeaders();
+                            if ("data".equals(headers.get("type"))) {
+                                promise.complete(event.getBody());
+                            }
+                            if ("end_of_stream".equals(headers.get("type"))) {
+                                eof = true;
+                                promise.complete(null);
+                            }
+                        })
+                        .onFailure(promise::fail);
+
+            } catch (IOException e) {
+                platform.executor.submit(() -> promise.fail(e));
+            }
+        }
+    });
+}
+
+
+>>> Consistency Check
+  Calling Ollama for: consistency check
+    Prompt length: 12311 chars
+    Attempt 1/3
+    ✓ Response received: 525 chars
+    Consistency: False
+    Signature preserved: True
+    Problems found: 4
+      1. Inlining of EventEmitter.getInstance() not applied - still uses EventEmitter.INSTANCE directly
+      2. Inlining of Platform.getInstance() not fully applied - missing inline of initialize() call
+      3. Inlining of EventEnvelope.setTo() not applied - should replace setTo() with direct field assignment
+      4. Inlining of EventEnvelope.setHeader() not applied - should replace setHeader() with direct field assignment
+    ✗ Consistency check failed
+      - Will retry with rewrite prompt
+  Attempt 2/3
+  Calling Ollama for: rewrite attempt 1
+    Prompt length: 12493 chars
+    Attempt 1/3
+    ✓ Response received: 1398 chars
+    Extracting code from response
+      Removed ```java``` markers
+      Extracted code: 1386 chars
+    Inlined code:
+      public Future<Object> get() {
+    final EventEmitter po = EventEmitter.INSTANCE;
+    return Future.future(promise -> {
+        Platform.initialize();
+        Platform platform = Platform.INSTANCE;
+        if (eof || closed) {
+            platform.executor.submit(() -> promise.complete(null));
+        } else {
+            EventEnvelope request = new EventEnvelope();
+            request.to = streamId;
+            AsyncHttpRequest httpRequest = new AsyncHttpRequest();
+            httpRequest.headers.put("type", "read");
+            request.body = httpRequest;
+            try {
+                po.asyncRequest(request, timeout)
+                        .onSuccess(event -> {
+                            Map<String, String> headers = ((AsyncHttpRequest)event.body).headers;
+                            if ("data".equals(headers.get("type"))) {
+                                promise.complete(((AsyncHttpRequest)event.body).body);
+                            }
+                            if ("end_of_stream".equals(headers.get("type"))) {
+                                eof = true;
+                                promise.complete(null);
+                            }
+                        })
+                        .onFailure(promise::fail);
+
+            } catch (IOException e) {
+                platform.executor.submit(() -> promise.fail(e));
+            }
+        }
+    });
+}
+
+
+>>> Consistency Check
+  Calling Ollama for: consistency check
+    Prompt length: 12454 chars
+    Attempt 1/3
+    ✓ Response received: 1155 chars
+    Consistency: False
+    Signature preserved: True
+    Problems found: 6
+      1. Incorrect inlining of `EventEmitter.getInstance()` - should return `EventEmitter.INSTANCE` but was incorrectly removed
+      2. Incorrect inlining of `Platform.getInstance()` - method call remains but should have been fully substituted with direct access to `Platform.INSTANCE` after initialization
+      3. The inlined version constructs an `EventEnvelope` and sets fields directly, which changes the semantic behavior from using builder methods like `.setTo()` and `.setHeader()`
+      4. Inlining of `event.getHeaders()` and `event.getBody()` replaced with direct field access `((AsyncHttpRequest)event.body).headers` and `((AsyncHttpRequest)event.body).body`, which breaks expected semantics because `event` is not an `AsyncHttpRequest`
+      5. Missing replacement of `event.getHeaders()` and `event.getBody()` on the success callback; these refer to the response envelope, not the request
+      6. Incorrect assumption that `event.body` is an `AsyncHttpRequest`; in original code, `event` itself is the response envelope from `asyncRequest`
+    ✗ Consistency check failed
+      - Will retry with rewrite prompt
+  Attempt 3/3
+  Calling Ollama for: rewrite attempt 2
+    Prompt length: 13248 chars
+    Attempt 1/3
+    ✓ Response received: 1205 chars
+    Extracting code from response
+      Removed ```java``` markers
+      Extracted code: 1193 chars
+    Inlined code:
+      public Future<Object> get() {
+    final EventEmitter po = EventEmitter.INSTANCE;
+    return Future.future(promise -> {
+        Platform.initialize();
+        Platform platform = Platform.INSTANCE;
+        if (eof || closed) {
+            platform.executor.submit(() -> promise.complete(null));
+        } else {
+            EventEnvelope request = new EventEnvelope().setTo(streamId).setHeader("type", "read");
+            try {
+                po.asyncRequest(request, timeout)
+                        .onSuccess(event -> {
+                            Map<String, String> headers = event.getHeaders();
+                            if ("data".equals(headers.get("type"))) {
+                                promise.complete(event.getBody());
+                            }
+                            if ("end_of_stream".equals(headers.get("type"))) {
+                                eof = true;
+                                promise.complete(null);
+                            }
+                        })
+                        .onFailure(promise::fail);
+
+            } catch (IOException e) {
+                platform.executor.submit(() -> promise.fail(e));
+            }
+        }
+    });
+}
+
+
+>>> Consistency Check
+  Calling Ollama for: consistency check
+    Prompt length: 12261 chars
+    Attempt 1/3
+    ✓ Response received: 68 chars
+    Consistency: True
+    Signature preserved: True
+    No problems found
+    ✓ Consistency check passed
+  ✓ Successfully inlined org.platformlambda.core.models.EventEnvelope.setTo
+
+--------------------------------------------------------------------------------
+Inlining: org.platformlambda.core.models.AsyncHttpRequest.setHeader
+--------------------------------------------------------------------------------
+  Original caller body:
+    public Future<Object> get() {
+    final EventEmitter po = EventEmitter.INSTANCE;
+    return Future.future(promise -> {
+        Platform.initialize();
+        Platform platform = Platform.INSTANCE;
+        if (eof || closed) {
+            platform.executor.submit(() -> promise.complete(null));
+        } else {
+            EventEnvelope request = new EventEnvelope().setTo(streamId).setHeader("type", "read");
+            try {
+                po.asyncRequest(request, timeout)
+                        .onSuccess(event -> {
+                            Map<String, String> headers = event.getHeaders();
+                            if ("data".equals(headers.get("type"))) {
+                                promise.complete(event.getBody());
+                            }
+                            if ("end_of_stream".equals(headers.get("type"))) {
+                                eof = true;
+                                promise.complete(null);
+                            }
+                        })
+                        .onFailure(promise::fail);
+
+            } catch (IOException e) {
+                platform.executor.submit(() -> promise.fail(e));
+            }
+        }
+    });
+}
+
+  Callee body to inline:
+        public AsyncHttpRequest setHeader(String key, String value) {
+        setNonNullValue(headers, key, value);
+        return this;
+    }
+
+  Attempt 1/3
+  Calling Ollama for: initial inlining
+    Prompt length: 3084 chars
+    Attempt 1/3
+    ✓ Response received: 1241 chars
+    Extracting code from response
+      Removed ```java``` markers
+      Extracted code: 1229 chars
+    Inlined code:
+      public Future<Object> get() {
+    final EventEmitter po = EventEmitter.INSTANCE;
+    return Future.future(promise -> {
+        Platform.initialize();
+        Platform platform = Platform.INSTANCE;
+        if (eof || closed) {
+            platform.executor.submit(() -> promise.complete(null));
+        } else {
+            EventEnvelope request = new EventEnvelope().setTo(streamId);
+            setNonNullValue(request.headers, "type", "read");
+            try {
+                po.asyncRequest(request, timeout)
+                        .onSuccess(event -> {
+                            Map<String, String> headers = event.getHeaders();
+                            if ("data".equals(headers.get("type"))) {
+                                promise.complete(event.getBody());
+                            }
+                            if ("end_of_stream".equals(headers.get("type"))) {
+                                eof = true;
+                                promise.complete(null);
+                            }
+                        })
+                        .onFailure(promise::fail);
+
+            } catch (IOException e) {
+                platform.executor.submit(() -> promise.fail(e));
+            }
+        }
+    });
+}
+
+
+>>> Consistency Check
+  Calling Ollama for: consistency check
+    Prompt length: 12297 chars
+    Attempt 1/3
+    ✓ Response received: 859 chars
+    Consistency: False
+    Signature preserved: True
+    Problems found: 3
+      1. The inlined version incorrectly replaces `request.setHeader("type", "read")` with `setNonNullValue(request.headers, "type", "read")`, but `setNonNullValue` is not a standalone function; it's part of the `AsyncHttpRequest.setHeader` method which also returns `this`. This breaks the fluent API usage.
+      2. The replacement of `event.getHeaders()` and `event.getBody()` seems to assume that `event` is an instance of `AsyncHttpRequest`, but in the original code, `event` is an `EventEnvelope`. The methods `getHeaders()` and `getBody()` belong to `EventEnvelope`, not `AsyncHttpRequest`.
+      3. Missing import or incorrect handling of `setNonNullValue` method - this method is not defined in the provided context and should not be used directly.
+    ✗ Consistency check failed
+      - Will retry with rewrite prompt
+  Attempt 2/3
+  Calling Ollama for: rewrite attempt 1
+    Prompt length: 12814 chars
+    Attempt 1/3
+    ✓ Response received: 1347 chars
+    Extracting code from response
+      Removed ```java``` markers
+      Extracted code: 1335 chars
+    Inlined code:
+      public Future<Object> get() {
+    final EventEmitter po = EventEmitter.INSTANCE;
+    return Future.future(promise -> {
+        Platform.initialize();
+        Platform platform = Platform.INSTANCE;
+        if (eof || closed) {
+            platform.executor.submit(() -> promise.complete(null));
+        } else {
+            EventEnvelope request = new EventEnvelope();
+            request.setTo(streamId);
+            if (request.headers == null) {
+                request.headers = new HashMap<>();
+            }
+            request.headers.put("type", "read");
+            try {
+                po.asyncRequest(request, timeout)
+                        .onSuccess(event -> {
+                            Map<String, String> headers = event.headers;
+                            if ("data".equals(headers.get("type"))) {
+                                promise.complete(event.body);
+                            }
+                            if ("end_of_stream".equals(headers.get("type"))) {
+                                eof = true;
+                                promise.complete(null);
+                            }
+                        })
+                        .onFailure(promise::fail);
+
+            } catch (IOException e) {
+                platform.executor.submit(() -> promise.fail(e));
+            }
+        }
+    });
+}
+
+
+>>> Consistency Check
+  Calling Ollama for: consistency check
+    Prompt length: 12403 chars
+    Attempt 1/3
+    ✓ Response received: 983 chars
+    Consistency: False
+    Signature preserved: True
+    Problems found: 4
+      1. Inline replacement of `EventEmitter.getInstance()` should return `EventEmitter.INSTANCE` but was replaced with direct access to `EventEmitter.INSTANCE` which is correct, however...
+      2. The call to `Platform.getInstance()` inside the original method is duplicated by an explicit call to `Platform.initialize();` followed by accessing `Platform.INSTANCE`. This duplicates the behavior of `Platform.getInstance()` which also calls `initialize()` before returning `INSTANCE`. While functionally possibly equivalent, it's not a clean inline.
+      3. Accessing `event.headers` and `event.body` directly instead of using `event.getHeaders()` and `event.getBody()` changes encapsulation and could be incorrect if those fields are not publicly accessible or have different semantics.
+      4. Missing import or declaration for `HashMap` used in `request.headers = new HashMap<>();`
+    ✗ Consistency check failed
+      - Will retry with rewrite prompt
+  Attempt 3/3
+  Calling Ollama for: rewrite attempt 2
+    Prompt length: 13043 chars
+    Attempt 1/3
+    ✓ Response received: 1198 chars
+    Extracting code from response
+      Removed ```java``` markers
+      Extracted code: 1186 chars
+    Inlined code:
+      public Future<Object> get() {
+    final EventEmitter po = EventEmitter.INSTANCE;
+    return Future.future(promise -> {
+        Platform platformInstance = Platform.INSTANCE;
+        if (eof || closed) {
+            platformInstance.executor.submit(() -> promise.complete(null));
+        } else {
+            EventEnvelope request = new EventEnvelope().setTo(streamId).setHeader("type", "read");
+            try {
+                po.asyncRequest(request, timeout)
+                        .onSuccess(event -> {
+                            Map<String, String> headers = event.getHeaders();
+                            if ("data".equals(headers.get("type"))) {
+                                promise.complete(event.getBody());
+                            }
+                            if ("end_of_stream".equals(headers.get("type"))) {
+                                eof = true;
+                                promise.complete(null);
+                            }
+                        })
+                        .onFailure(promise::fail);
+
+            } catch (IOException e) {
+                platformInstance.executor.submit(() -> promise.fail(e));
+            }
+        }
+    });
+}
+
+
+>>> Consistency Check
+  Calling Ollama for: consistency check
+    Prompt length: 12254 chars
+    Attempt 1/3
+    ✓ Response received: 454 chars
+    Consistency: False
+    Signature preserved: True
+    Problems found: 3
+      1. Missing Platform.initialize() call that was present in the original method
+      2. Removed call to Platform.getInstance() and direct access to Platform.INSTANCE may not trigger initialization
+      3. The inlined version skips the Platform platform = Platform.INSTANCE assignment which could affect semantics if Platform.initialize() has side effects
+    ✗ Consistency check failed
+      - Max retries reached, keeping original
+  ✗ Failed to inline org.platformlambda.core.models.AsyncHttpRequest.setHeader, keeping original body
+
+--------------------------------------------------------------------------------
+Inlining: org.platformlambda.core.system.EventEmitter.asyncRequest
+--------------------------------------------------------------------------------
+  Original caller body:
+    public Future<Object> get() {
+    final EventEmitter po = EventEmitter.INSTANCE;
+    return Future.future(promise -> {
+        Platform.initialize();
+        Platform platform = Platform.INSTANCE;
+        if (eof || closed) {
+            platform.executor.submit(() -> promise.complete(null));
+        } else {
+            EventEnvelope request = new EventEnvelope().setTo(streamId).setHeader("type", "read");
+            try {
+                po.asyncRequest(request, timeout)
+                        .onSuccess(event -> {
+                            Map<String, String> headers = event.getHeaders();
+                            if ("data".equals(headers.get("type"))) {
+                                promise.complete(event.getBody());
+                            }
+                            if ("end_of_stream".equals(headers.get("type"))) {
+                                eof = true;
+                                promise.complete(null);
+                            }
+                        })
+                        .onFailure(promise::fail);
+
+            } catch (IOException e) {
+                platform.executor.submit(() -> promise.fail(e));
+            }
+        }
+    });
+}
+
+  Callee body to inline:
+                                                  String eventEndpoint, boolean rpc) throws IOException {
+        if (event == null) {
+            throw new IllegalArgumentException(MISSING_EVENT);
+        }
+        String dest = event.getTo();
+        if (dest == null) {
+            throw new IllegalArgumentException(MISSING_ROUTING_PATH);
+        }
+        final URI url;
+        try {
+            url = new URI(eventEndpoint);
+        } catch (URISyntaxException e) {
+            throw new IllegalArgumentException(e.getMessage());
+        }
+        AsyncHttpRequest req = new AsyncHttpRequest();
+        req.setMethod(POST);
+        req.setHeader(CONTENT_TYPE, "application/octet-stream");
+        req.setHeader(ACCEPT, "*/*");
+        req.setHeader(X_TIMEOUT, String.valueOf(Math.max(100L, timeout)));
+        if (!rpc) {
+            req.setHeader(X_ASYNC, "true");
+        }
+        // optional HTTP request headers
+        if (headers != null) {
+            for (Map.Entry<String, String> kv : headers.entrySet()) {
+                req.setHeader(kv.getKey(), kv.getValue());
+            }
+        }
+        // propagate trace-ID if any
+        if (event.getTraceId() != null) {
+            req.setHeader(X_TRACE_ID, event.getTraceId());
+        }
+        req.setUrl(url.getPath());
+        req.setTargetHost(getTargetFromUrl(url));
+        byte[] b = event.toBytes();
+        req.setBody(b);
+        req.setContentLength(b.length);
+        EventEnvelope request = new EventEnvelope().setTo(HTTP_REQUEST).setBody(req);
+        if (event.getFrom() != null) {
+            request.setFrom(event.getFrom());
+        }
+        if (event.getTraceId() != null) {
+            request.setTraceId(event.getTraceId());
+        }
+        if (event.getTracePath() != null) {
+            request.setTracePath(event.getTracePath());
+        }
+        return Future.future(promise -> {
+            try {
+                // add 100 ms to make sure it does not time out earlier than the target service
+                Future<EventEnvelope> res = asyncRequest(request, Math.max(100L, timeout)+100L);
+                res.onSuccess(evt -> {
+                    Object o = evt.getBody();
+                    if (o instanceof byte[]) {
+                        try {
+                            EventEnvelope response = new EventEnvelope((byte[]) evt.getBody());
+                            promise.complete(response);
+                        } catch (IOException e) {
+                            // response is not a packed EventEnvelope
+                            promise.complete(new EventEnvelope()
+                                    .setStatus(400).setBody("Did you configure rest.yaml correctly? " +
+                                                            "Invalid result set - "+e.getMessage()));
+                        }
+                    } else {
+                        if (evt.getStatus() >= 400 && evt.getBody() instanceof Map) {
+                            Map<String, Object> data = (Map<String, Object>) evt.getBody();
+                            if (ERROR.equals(data.get(TYPE)) && data.containsKey(MESSAGE) &&
+                                    data.get(MESSAGE) instanceof String) {
+                                EventEnvelope error = new EventEnvelope()
+                                        .setStatus(evt.getStatus()).setBody(data.get(MESSAGE));
+                                promise.complete(error);
+                            } else {
+                                promise.complete(evt);
+                            }
+                        } else {
+                            promise.complete(evt);
+                        }
+                    }
+                });
+                res.onFailure(e -> promise.complete(new EventEnvelope().setStatus(408).setBody(e.getMessage())));
+
+            } catch (IllegalArgumentException e) {
+                Platform.getInstance().getEventExecutor().submit(() ->
+                        promise.complete(new EventEnvelope().setStatus(400).setBody(e.getMessage())));
+            } catch (IOException e) {
+                Platform.getInstance().getEventExecutor().submit(() ->
+                        promise.complete(new EventEnvelope().setStatus(500).setBody(e.getMessage())));
+            }
+        });
+    }
+
+  Attempt 1/3
+  Calling Ollama for: initial inlining
+    Prompt length: 7223 chars
+    Attempt 1/3
+    ✓ Response received: 7260 chars
+    Extracting code from response
+      Removed ```java``` markers
+      Extracted code: 7248 chars
+    Inlined code:
+      public Future<Object> get() {
+    final EventEmitter po = EventEmitter.INSTANCE;
+    return Future.future(promise -> {
+        Platform.initialize();
+        Platform platform = Platform.INSTANCE;
+        if (eof || closed) {
+            platform.executor.submit(() -> promise.complete(null));
+        } else {
+            EventEnvelope request = new EventEnvelope().setTo(streamId).setHeader("type", "read");
+            try {
+                Future.future(promise_inner -> {
+                    try {
+                        String eventEndpoint = request.getTo();
+                        boolean rpc = false;
+                        if (request == null) {
+                            throw new IllegalArgumentException("Missing event");
+                        }
+                        String dest = request.getTo();
+                        if (dest == null) {
+                            throw new IllegalArgumentException("Missing routing path");
+                        }
+                        final URI url;
+                        try {
+                            url = new URI(eventEndpoint);
+                        } catch (URISyntaxException e) {
+                            throw new IllegalArgumentException(e.getMessage());
+                        }
+                        AsyncHttpRequest req = new AsyncHttpRequest();
+                        req.setMethod("POST");
+                        req.setHeader("Content-Type", "application/octet-stream");
+                        req.setHeader("Accept", "*/*");
+                        req.setHeader("X-Timeout", String.valueOf(Math.max(100L, timeout)));
+                        if (!rpc) {
+                            req.setHeader("X-Async", "true");
+                        }
+                        // optional HTTP request headers
+                        if (null != null) {
+                            for (Map.Entry<String, String> kv : ((Map<String, String>) null).entrySet()) {
+                                req.setHeader(kv.getKey(), kv.getValue());
+                            }
+                        }
+                        // propagate trace-ID if any
+                        if (request.getTraceId() != null) {
+                            req.setHeader("X-Trace-Id", request.getTraceId());
+                        }
+                        req.setUrl(url.getPath());
+                        req.setTargetHost(getTargetFromUrl(url));
+                        byte[] b = request.toBytes();
+                        req.setBody(b);
+                        req.setContentLength(b.length);
+                        EventEnvelope request_inner = new EventEnvelope().setTo("http.request").setBody(req);
+                        if (request.getFrom() != null) {
+                            request_inner.setFrom(request.getFrom());
+                        }
+                        if (request.getTraceId() != null) {
+                            request_inner.setTraceId(request.getTraceId());
+                        }
+                        if (request.getTracePath() != null) {
+                            request_inner.setTracePath(request.getTracePath());
+                        }
+                        Future.future(promise_inner_2 -> {
+                            try {
+                                // add 100 ms to make sure it does not time out earlier than the target service
+                                Future<EventEnvelope> res = asyncRequest(request_inner, Math.max(100L, timeout)+100L);
+                                res.onSuccess(evt -> {
+                                    Object o = evt.getBody();
+                                    if (o instanceof byte[]) {
+                                        try {
+                                            EventEnvelope response = new EventEnvelope((byte[]) evt.getBody());
+                                            promise_inner_2.complete(response);
+                                        } catch (IOException e) {
+                                            // response is not a packed EventEnvelope
+                                            promise_inner_2.complete(new EventEnvelope()
+                                                    .setStatus(400).setBody("Did you configure rest.yaml correctly? " +
+                                                                            "Invalid result set - "+e.getMessage()));
+                                        }
+                                    } else {
+                                        if (evt.getStatus() >= 400 && evt.getBody() instanceof Map) {
+                                            Map<String, Object> data = (Map<String, Object>) evt.getBody();
+                                            if ("error".equals(data.get("type")) && data.containsKey("message") &&
+                                                    data.get("message") instanceof String) {
+                                                EventEnvelope error = new EventEnvelope()
+                                                        .setStatus(evt.getStatus()).setBody(data.get("message"));
+                                                promise_inner_2.complete(error);
+                                            } else {
+                                                promise_inner_2.complete(evt);
+                                            }
+                                        } else {
+                                            promise_inner_2.complete(evt);
+                                        }
+                                    }
+                                });
+                                res.onFailure(e -> promise_inner_2.complete(new EventEnvelope().setStatus(408).setBody(e.getMessage())));
+
+                            } catch (IllegalArgumentException e) {
+                                Platform.getInstance().getEventExecutor().submit(() ->
+                                        promise_inner_2.complete(new EventEnvelope().setStatus(400).setBody(e.getMessage())));
+                            } catch (IOException e) {
+                                Platform.getInstance().getEventExecutor().submit(() ->
+                                        promise_inner_2.complete(new EventEnvelope().setStatus(500).setBody(e.getMessage())));
+                            }
+                        }).onSuccess(promise_inner::complete).onFailure(promise_inner::fail);
+                    } catch (Exception e) {
+                        promise_inner.fail(e);
+                    }
+                })
+                        .onSuccess(event -> {
+                            Map<String, String> headers = event.getHeaders();
+                            if ("data".equals(headers.get("type"))) {
+                                promise.complete(event.getBody());
+                            }
+                            if ("end_of_stream".equals(headers.get("type"))) {
+                                eof = true;
+                                promise.complete(null);
+                            }
+                        })
+                        .onFailure(promise::fail);
+
+            } catch (IOException e) {
+                platform.executor.submit(() -> promise.fail(e));
+            }
+        }
+    });
+}
+
+
+>>> Consistency Check
+  Calling Ollama for: consistency check
+    Prompt length: 18316 chars
+    Attempt 1/3
+    ✓ Response received: 890 chars
+    Consistency: False
+    Signature preserved: True
+    Problems found: 5
+      1. Incorrect inlining of `po.asyncRequest(request, timeout)` - the inlined version expands into a complex nested future construction which alters the original semantics
+      2. Variable name collision: `request` is reused in the inner `asyncRequest` inlined body, potentially causing confusion or incorrect references
+      3. The inline replacement for `Platform.getInstance().getEventExecutor()` was not applied consistently; some instances remain as method calls
+      4. Null pointer dereference risk in inlined code: `if (null != null)` and `for (Map.Entry<String, String> kv : ((Map<String, String>) null).entrySet())`
+      5. Incomplete substitution of `EventEmitter.getInstance()`; still appears as `EventEmitter po = EventEmitter.INSTANCE;` instead of using the static method
+    ✗ Consistency check failed
+      - Will retry with rewrite prompt
+  Attempt 2/3
+  Calling Ollama for: rewrite attempt 1
+    Prompt length: 18854 chars
+    Attempt 1/3
+    ✓ Response received: 6707 chars
+    Extracting code from response
+      Removed ```java``` markers
+      Extracted code: 6695 chars
+    Inlined code:
+      public Future<Object> get() {
+    final EventEmitter po = EventEmitter.INSTANCE;
+    return Future.future(promise -> {
+        Platform.initialize();
+        Platform platform = Platform.INSTANCE;
+        if (eof || closed) {
+            platform.executor.submit(() -> promise.complete(null));
+        } else {
+            EventEnvelope request = new EventEnvelope().setTo(streamId).setHeader("type", "read");
+            try {
+                Future.future(promise_inner -> {
+                    try {
+                        if (request == null) {
+                            throw new IllegalArgumentException("Missing event");
+                        }
+                        String dest = request.getTo();
+                        if (dest == null) {
+                            throw new IllegalArgumentException("Missing routing path");
+                        }
+                        final URI url;
+                        try {
+                            url = new URI(dest);
+                        } catch (URISyntaxException e) {
+                            throw new IllegalArgumentException(e.getMessage());
+                        }
+                        AsyncHttpRequest req = new AsyncHttpRequest();
+                        req.setMethod("POST");
+                        req.setHeader("Content-Type", "application/octet-stream");
+                        req.setHeader("Accept", "*/*");
+                        req.setHeader("X-Timeout", String.valueOf(Math.max(100L, timeout)));
+                        req.setHeader("X-Async", "true");
+                        // propagate trace-ID if any
+                        if (request.getTraceId() != null) {
+                            req.setHeader("X-Trace-Id", request.getTraceId());
+                        }
+                        req.setUrl(url.getPath());
+                        req.setTargetHost(getTargetFromUrl(url));
+                        byte[] b = request.toBytes();
+                        req.setBody(b);
+                        req.setContentLength(b.length);
+                        EventEnvelope request_inner = new EventEnvelope().setTo("http.request").setBody(req);
+                        if (request.getFrom() != null) {
+                            request_inner.setFrom(request.getFrom());
+                        }
+                        if (request.getTraceId() != null) {
+                            request_inner.setTraceId(request.getTraceId());
+                        }
+                        if (request.getTracePath() != null) {
+                            request_inner.setTracePath(request.getTracePath());
+                        }
+                        Future.future(promise_inner_2 -> {
+                            try {
+                                // add 100 ms to make sure it does not time out earlier than the target service
+                                Future<EventEnvelope> res = asyncRequest(request_inner, Math.max(100L, timeout)+100L);
+                                res.onSuccess(evt -> {
+                                    Object o = evt.getBody();
+                                    if (o instanceof byte[]) {
+                                        try {
+                                            EventEnvelope response = new EventEnvelope((byte[]) evt.getBody());
+                                            promise_inner_2.complete(response);
+                                        } catch (IOException e) {
+                                            // response is not a packed EventEnvelope
+                                            promise_inner_2.complete(new EventEnvelope()
+                                                    .setStatus(400).setBody("Did you configure rest.yaml correctly? " +
+                                                                            "Invalid result set - "+e.getMessage()));
+                                        }
+                                    } else {
+                                        if (evt.getStatus() >= 400 && evt.getBody() instanceof Map) {
+                                            Map<String, Object> data = (Map<String, Object>) evt.getBody();
+                                            if ("error".equals(data.get("type")) && data.containsKey("message") &&
+                                                    data.get("message") instanceof String) {
+                                                EventEnvelope error = new EventEnvelope()
+                                                        .setStatus(evt.getStatus()).setBody(data.get("message"));
+                                                promise_inner_2.complete(error);
+                                            } else {
+                                                promise_inner_2.complete(evt);
+                                            }
+                                        } else {
+                                            promise_inner_2.complete(evt);
+                                        }
+                                    }
+                                });
+                                res.onFailure(e -> promise_inner_2.complete(new EventEnvelope().setStatus(408).setBody(e.getMessage())));
+
+                            } catch (IllegalArgumentException e) {
+                                Platform.INSTANCE.executor.submit(() ->
+                                        promise_inner_2.complete(new EventEnvelope().setStatus(400).setBody(e.getMessage())));
+                            } catch (IOException e) {
+                                Platform.INSTANCE.executor.submit(() ->
+                                        promise_inner_2.complete(new EventEnvelope().setStatus(500).setBody(e.getMessage())));
+                            }
+                        }).onSuccess(promise_inner::complete).onFailure(promise_inner::fail);
+                    } catch (Exception e) {
+                        promise_inner.fail(e);
+                    }
+                })
+                        .onSuccess(event -> {
+                            Map<String, String> headers = event.getHeaders();
+                            if ("data".equals(headers.get("type"))) {
+                                promise.complete(event.getBody());
+                            }
+                            if ("end_of_stream".equals(headers.get("type"))) {
+                                eof = true;
+                                promise.complete(null);
+                            }
+                        })
+                        .onFailure(promise::fail);
+
+            } catch (IOException e) {
+                platform.executor.submit(() -> promise.fail(e));
+            }
+        }
+    });
+}
+
+
+>>> Consistency Check
+  Calling Ollama for: consistency check
+    Prompt length: 17763 chars
+    Attempt 1/3
+    ✓ Response received: 970 chars
+    Consistency: False
+    Signature preserved: True
+    Problems found: 5
+      1. The inlined version incorrectly replaces `po.asyncRequest(request, timeout)` with a full inline of the `asyncRequest` method, changing the control flow and introducing incorrect nesting of Futures.
+      2. Variable name conflicts: `promise_inner`, `promise_inner_2` are not present in the original logic and change the semantic structure.
+      3. Incorrectly inlined `asyncRequest` method which has side effects and complex internal logic that should not be expanded directly into the calling site.
+      4. Missing import or definition for classes like `URI`, `Future`, `EventEmitter`, etc., may lead to compilation errors.
+      5. Logic mismatch: The original method returns a `Future<Object>` from `po.asyncRequest(...).onSuccess(...).onFailure(...)`, but the inlined version wraps this inside another `Future.future()` leading to a nested Future structure.
+    ✗ Consistency check failed
+      - Will retry with rewrite prompt
+  Attempt 3/3
+  Calling Ollama for: rewrite attempt 2
+    Prompt length: 18381 chars
+    Attempt 1/3
+    ✓ Response received: 1205 chars
+    Extracting code from response
+      Removed ```java``` markers
+      Extracted code: 1193 chars
+    Inlined code:
+      public Future<Object> get() {
+    final EventEmitter po = EventEmitter.INSTANCE;
+    return Future.future(promise -> {
+        Platform.initialize();
+        Platform platform = Platform.INSTANCE;
+        if (eof || closed) {
+            platform.executor.submit(() -> promise.complete(null));
+        } else {
+            EventEnvelope request = new EventEnvelope().setTo(streamId).setHeader("type", "read");
+            try {
+                po.asyncRequest(request, timeout)
+                        .onSuccess(event -> {
+                            Map<String, String> headers = event.getHeaders();
+                            if ("data".equals(headers.get("type"))) {
+                                promise.complete(event.getBody());
+                            }
+                            if ("end_of_stream".equals(headers.get("type"))) {
+                                eof = true;
+                                promise.complete(null);
+                            }
+                        })
+                        .onFailure(promise::fail);
+
+            } catch (IOException e) {
+                platform.executor.submit(() -> promise.fail(e));
+            }
+        }
+    });
+}
+
+
+>>> Consistency Check
+  Calling Ollama for: consistency check
+    Prompt length: 12261 chars
+    Attempt 1/3
+    ✓ Response received: 82 chars
+    Consistency: True
+    Signature preserved: True
+    No problems found
+    ✓ Consistency check passed
+  ✓ Successfully inlined org.platformlambda.core.system.EventEmitter.asyncRequest
+
+--------------------------------------------------------------------------------
+Inlining: org.platformlambda.core.models.AsyncHttpRequest.getHeaders
+--------------------------------------------------------------------------------
+  Original caller body:
+    public Future<Object> get() {
+    final EventEmitter po = EventEmitter.INSTANCE;
+    return Future.future(promise -> {
+        Platform.initialize();
+        Platform platform = Platform.INSTANCE;
+        if (eof || closed) {
+            platform.executor.submit(() -> promise.complete(null));
+        } else {
+            EventEnvelope request = new EventEnvelope().setTo(streamId).setHeader("type", "read");
+            try {
+                po.asyncRequest(request, timeout)
+                        .onSuccess(event -> {
+                            Map<String, String> headers = event.getHeaders();
+                            if ("data".equals(headers.get("type"))) {
+                                promise.complete(event.getBody());
+                            }
+                            if ("end_of_stream".equals(headers.get("type"))) {
+                                eof = true;
+                                promise.complete(null);
+                            }
+                        })
+                        .onFailure(promise::fail);
+
+            } catch (IOException e) {
+                platform.executor.submit(() -> promise.fail(e));
+            }
+        }
+    });
+}
+
+  Callee body to inline:
+        public Map<String, String> getHeaders() {
+        return headers;
+    }
+
+  Attempt 1/3
+  Calling Ollama for: initial inlining
+    Prompt length: 3023 chars
+    Attempt 1/3
+    ✓ Response received: 1200 chars
+    Extracting code from response
+      Removed ```java``` markers
+      Extracted code: 1188 chars
+    Inlined code:
+      public Future<Object> get() {
+    final EventEmitter po = EventEmitter.INSTANCE;
+    return Future.future(promise -> {
+        Platform.initialize();
+        Platform platform = Platform.INSTANCE;
+        if (eof || closed) {
+            platform.executor.submit(() -> promise.complete(null));
+        } else {
+            EventEnvelope request = new EventEnvelope().setTo(streamId).setHeader("type", "read");
+            try {
+                po.asyncRequest(request, timeout)
+                        .onSuccess(event -> {
+                            Map<String, String> headers = event.headers;
+                            if ("data".equals(headers.get("type"))) {
+                                promise.complete(event.getBody());
+                            }
+                            if ("end_of_stream".equals(headers.get("type"))) {
+                                eof = true;
+                                promise.complete(null);
+                            }
+                        })
+                        .onFailure(promise::fail);
+
+            } catch (IOException e) {
+                platform.executor.submit(() -> promise.fail(e));
+            }
+        }
+    });
+}
+
+
+>>> Consistency Check
+  Calling Ollama for: consistency check
+    Prompt length: 12256 chars
+    Attempt 1/3
+    ✓ Response received: 519 chars
+    Consistency: False
+    Signature preserved: True
+    Problems found: 3
+      1. The inlined version changes 'event.getHeaders()' to 'event.headers', which assumes direct field access instead of calling the getter method.
+      2. The inlined version removes the call to 'Platform.getInstance()' inside the IOException catch block, changing the semantics.
+      3. The inlined version omits the call to 'Platform.getInstance().getEventExecutor()' in the catch block, leading to different behavior.
+    ✗ Consistency check failed
+      - Will retry with rewrite prompt
+  Attempt 2/3
+  Calling Ollama for: rewrite attempt 1
+    Prompt length: 12441 chars
+    Attempt 1/3
+    ✓ Response received: 1229 chars
+    Extracting code from response
+      Removed ```java``` markers
+      Extracted code: 1217 chars
+    Inlined code:
+      public Future<Object> get() {
+    final EventEmitter po = EventEmitter.INSTANCE;
+    return Future.future(promise -> {
+        Platform.initialize();
+        Platform platform = Platform.INSTANCE;
+        if (eof || closed) {
+            platform.executor.submit(() -> promise.complete(null));
+        } else {
+            EventEnvelope request = new EventEnvelope().setTo(streamId).setHeader("type", "read");
+            try {
+                po.asyncRequest(request, timeout)
+                        .onSuccess(event -> {
+                            Map<String, String> headers = event.getHeaders();
+                            if ("data".equals(headers.get("type"))) {
+                                promise.complete(event.getBody());
+                            }
+                            if ("end_of_stream".equals(headers.get("type"))) {
+                                eof = true;
+                                promise.complete(null);
+                            }
+                        })
+                        .onFailure(promise::fail);
+
+            } catch (IOException e) {
+                Platform.getInstance().getEventExecutor().submit(() -> promise.fail(e));
+            }
+        }
+    });
+}
+
+
+>>> Consistency Check
+  Calling Ollama for: consistency check
+    Prompt length: 12285 chars
+    Attempt 1/3
+    ✓ Response received: 82 chars
+    Consistency: True
+    Signature preserved: True
+    No problems found
+    ✓ Consistency check passed
+  ✓ Successfully inlined org.platformlambda.core.models.AsyncHttpRequest.getHeaders
+
+--------------------------------------------------------------------------------
+Inlining: org.platformlambda.core.models.AsyncHttpRequest.getBody
+--------------------------------------------------------------------------------
+  Original caller body:
+    public Future<Object> get() {
+    final EventEmitter po = EventEmitter.INSTANCE;
+    return Future.future(promise -> {
+        Platform.initialize();
+        Platform platform = Platform.INSTANCE;
+        if (eof || closed) {
+            platform.executor.submit(() -> promise.complete(null));
+        } else {
+            EventEnvelope request = new EventEnvelope().setTo(streamId).setHeader("type", "read");
+            try {
+                po.asyncRequest(request, timeout)
+                        .onSuccess(event -> {
+                            Map<String, String> headers = event.getHeaders();
+                            if ("data".equals(headers.get("type"))) {
+                                promise.complete(event.getBody());
+                            }
+                            if ("end_of_stream".equals(headers.get("type"))) {
+                                eof = true;
+                                promise.complete(null);
+                            }
+                        })
+                        .onFailure(promise::fail);
+
+            } catch (IOException e) {
+                Platform.getInstance().getEventExecutor().submit(() -> promise.fail(e));
+            }
+        }
+    });
+}
+
+  Callee body to inline:
+        public Object getBody() {
+        return body;
+    }
+
+  Attempt 1/3
+  Calling Ollama for: initial inlining
+    Prompt length: 3022 chars
+    Attempt 1/3
+    ✓ Response received: 1224 chars
+    Extracting code from response
+      Removed ```java``` markers
+      Extracted code: 1212 chars
+    Inlined code:
+      public Future<Object> get() {
+    final EventEmitter po = EventEmitter.INSTANCE;
+    return Future.future(promise -> {
+        Platform.initialize();
+        Platform platform = Platform.INSTANCE;
+        if (eof || closed) {
+            platform.executor.submit(() -> promise.complete(null));
+        } else {
+            EventEnvelope request = new EventEnvelope().setTo(streamId).setHeader("type", "read");
+            try {
+                po.asyncRequest(request, timeout)
+                        .onSuccess(event -> {
+                            Map<String, String> headers = event.getHeaders();
+                            if ("data".equals(headers.get("type"))) {
+                                promise.complete(event.body);
+                            }
+                            if ("end_of_stream".equals(headers.get("type"))) {
+                                eof = true;
+                                promise.complete(null);
+                            }
+                        })
+                        .onFailure(promise::fail);
+
+            } catch (IOException e) {
+                Platform.getInstance().getEventExecutor().submit(() -> promise.fail(e));
+            }
+        }
+    });
+}
+
+
+>>> Consistency Check
+  Calling Ollama for: consistency check
+    Prompt length: 12304 chars
+    Attempt 1/3
+    ✓ Response received: 453 chars
+    Consistency: False
+    Signature preserved: True
+    Problems found: 2
+      1. In method inline replacement of 'event.getBody()' was incorrectly replaced with 'event.body', which changes access from a getter method to direct field access and may not be semantically equivalent
+      2. The inlined version skips validation present in the original 'EventEmitter.asyncRequest' method such as null checks and routing path verification
+    ✗ Consistency check failed
+      - Will retry with rewrite prompt
+  Attempt 2/3
+  Calling Ollama for: rewrite attempt 1
+    Prompt length: 12432 chars
+    Attempt 1/3
+    ✓ Response received: 1219 chars
+    Extracting code from response
+      Removed ```java``` markers
+      Extracted code: 1207 chars
+    Inlined code:
+      public Future<Object> get() {
+    final EventEmitter po = EventEmitter.INSTANCE;
+    return Future.future(promise -> {
+        Platform.initialize();
+        Platform platform = Platform.INSTANCE;
+        if (eof || closed) {
+            platform.executor.submit(() -> promise.complete(null));
+        } else {
+            EventEnvelope request = new EventEnvelope().setTo(streamId).setHeader("type", "read");
+            try {
+                po.asyncRequest(request, timeout)
+                        .onSuccess(event -> {
+                            Map<String, String> headers = event.getHeaders();
+                            if ("data".equals(headers.get("type"))) {
+                                promise.complete(event.getBody());
+                            }
+                            if ("end_of_stream".equals(headers.get("type"))) {
+                                eof = true;
+                                promise.complete(null);
+                            }
+                        })
+                        .onFailure(promise::fail);
+
+            } catch (IOException e) {
+                Platform.getInstance().executor.submit(() -> promise.fail(e));
+            }
+        }
+    });
+}
+
+
+>>> Consistency Check
+  Calling Ollama for: consistency check
+    Prompt length: 12299 chars
+    Attempt 1/3
+    ✓ Response received: 82 chars
+    Consistency: True
+    Signature preserved: True
+    No problems found
+    ✓ Consistency check passed
+  ✓ Successfully inlined org.platformlambda.core.models.AsyncHttpRequest.getBody
+
+  Final hop-1 method body after all inlining:
+    public Future<Object> get() {
+    final EventEmitter po = EventEmitter.INSTANCE;
+    return Future.future(promise -> {
+        Platform.initialize();
+        Platform platform = Platform.INSTANCE;
+        if (eof || closed) {
+            platform.executor.submit(() -> promise.complete(null));
+        } else {
+            EventEnvelope request = new EventEnvelope().setTo(streamId).setHeader("type", "read");
+            try {
+                po.asyncRequest(request, timeout)
+                        .onSuccess(event -> {
+                            Map<String, String> headers = event.getHeaders();
+                            if ("data".equals(headers.get("type"))) {
+                                promise.complete(event.getBody());
+                            }
+                            if ("end_of_stream".equals(headers.get("type"))) {
+                                eof = true;
+                                promise.complete(null);
+                            }
+                        })
+                        .onFailure(promise::fail);
+
+            } catch (IOException e) {
+                Platform.getInstance().executor.submit(() -> promise.fail(e));
+            }
+        }
+    });
+}
+
+====================================================================================================
+PHASE 1: Inlining Hop-2 into Hop-1 Method: org.platformlambda.core.models.EventBlocks.put
+====================================================================================================
+  No hop-2 methods to inline (or all are recursive)
+
+====================================================================================================
+PHASE 1: Inlining Hop-2 into Hop-1 Method: org.platformlambda.core.system.Platform.getInstance
+====================================================================================================
+  Found 1 hop-2 methods to inline:
+    - org.platformlambda.core.system.Platform.initialize
+
+
+--------------------------------------------------------------------------------
+Inlining: org.platformlambda.core.system.Platform.initialize
+--------------------------------------------------------------------------------
+  Original caller body:
+        public static Platform getInstance() {
+        initialize();
+        return INSTANCE;
+    }
+
+  Callee body to inline:
+        private static void initialize() {
+        if (initCounter.incrementAndGet() == 1) {
+            AppConfigReader config = AppConfigReader.getInstance();
+            int poolSize = Math.max(32, Utility.getInstance().str2int(config.getProperty("kernel.thread.pool", "100")));
+            system = Vertx.vertx().eventBus();
+            vertx = Vertx.vertx();
+            cache = SimpleCache.createCache("system.log.cache", 30000);
+            executor = Executors.newWorkStealingPool(poolSize);
+            log.info("Event system started with up to {} kernel threads", poolSize);
+        }
+        if (initCounter.get() > 10000) {
+            initCounter.set(10);
+        }
+    }
+
+  Attempt 1/3
+  Calling Ollama for: initial inlining
+    Prompt length: 2522 chars
+    Attempt 1/3
+    ✓ Response received: 934 chars
+    Extracting code from response
+      Removed ```java``` markers
+      Extracted code: 922 chars
+    Inlined code:
+      public static Platform getInstance() {
+    if (__inlined_initialize_initCounter.incrementAndGet() == 1) {
+        AppConfigReader __inlined_initialize_config = AppConfigReader.getInstance();
+        int __inlined_initialize_poolSize = Math.max(32, Utility.getInstance().str2int(__inlined_initialize_config.getProperty("kernel.thread.pool", "100")));
+        __inlined_initialize_system = Vertx.vertx().eventBus();
+        __inlined_initialize_vertx = Vertx.vertx();
+        __inlined_initialize_cache = SimpleCache.createCache("system.log.cache", 30000);
+        __inlined_initialize_executor = Executors.newWorkStealingPool(__inlined_initialize_poolSize);
+        __inlined_initialize_log.info("Event system started with up to {} kernel threads", __inlined_initialize_poolSize);
+    }
+    if (__inlined_initialize_initCounter.get() > 10000) {
+        __inlined_initialize_initCounter.set(10);
+    }
+    return INSTANCE;
+}
+
+
+>>> Consistency Check
+  Calling Ollama for: consistency check
+    Prompt length: 2781 chars
+    Attempt 1/3
+    ✓ Response received: 727 chars
+    Consistency: False
+    Signature preserved: True
+    Problems found: 8
+      1. Missing import or declaration for Vertx class
+      2. Missing import or declaration for EventBus class
+      3. Missing import or declaration for SimpleCache class
+      4. Missing import or declaration for Utility class
+      5. Missing import or declaration for AppConfigReader class
+      6. Missing import or declaration for Executors class
+      7. Missing field declarations for system, vertx, cache, executor, log, and initCounter
+      8. Inlined variable names prefixed with '__inlined_initialize_' may cause scope confusion or incorrect references if these fields are meant to be shared across the class
+    ✗ Consistency check failed
+      - Will retry with rewrite prompt
+  Attempt 2/3
+  Calling Ollama for: rewrite attempt 1
+    Prompt length: 3129 chars
+    Attempt 1/3
+    ✓ Response received: 661 chars
+    Extracting code from response
+      Removed ```java``` markers
+      Extracted code: 649 chars
+    Inlined code:
+      public static Platform getInstance() {
+    if (initCounter.incrementAndGet() == 1) {
+        AppConfigReader config = AppConfigReader.getInstance();
+        int poolSize = Math.max(32, Utility.getInstance().str2int(config.getProperty("kernel.thread.pool", "100")));
+        system = Vertx.vertx().eventBus();
+        vertx = Vertx.vertx();
+        cache = SimpleCache.createCache("system.log.cache", 30000);
+        executor = Executors.newWorkStealingPool(poolSize);
+        log.info("Event system started with up to {} kernel threads", poolSize);
+    }
+    if (initCounter.get() > 10000) {
+        initCounter.set(10);
+    }
+    return INSTANCE;
+}
+
+
+>>> Consistency Check
+  Calling Ollama for: consistency check
+    Prompt length: 2508 chars
+    Attempt 1/3
+    ✓ Response received: 563 chars
+    Consistency: False
+    Signature preserved: True
+    Problems found: 3
+      1. The inlined method is missing the `synchronized` keyword present in the original `initialize()` method's context, which may affect thread safety.
+      2. The inlined version removes the encapsulation of the initialization logic, potentially exposing internal implementation details.
+      3. Inlining has removed the method call abstraction, making future maintenance harder as changes to initialization logic must now be made directly within `getInstance()`.
+    ✗ Consistency check failed
+      - Will retry with rewrite prompt
+  Attempt 3/3
+  Calling Ollama for: rewrite attempt 2
+    Prompt length: 2737 chars
+    Attempt 1/3
+    ✓ Response received: 751 chars
+    Extracting code from response
+      Removed ```java``` markers
+      Extracted code: 739 chars
+    Inlined code:
+      public static Platform getInstance() {
+    synchronized (Platform.class) {
+        if (initCounter.incrementAndGet() == 1) {
+            AppConfigReader config = AppConfigReader.getInstance();
+            int poolSize = Math.max(32, Utility.getInstance().str2int(config.getProperty("kernel.thread.pool", "100")));
+            system = Vertx.vertx().eventBus();
+            vertx = Vertx.vertx();
+            cache = SimpleCache.createCache("system.log.cache", 30000);
+            executor = Executors.newWorkStealingPool(poolSize);
+            log.info("Event system started with up to {} kernel threads", poolSize);
+        }
+        if (initCounter.get() > 10000) {
+            initCounter.set(10);
+        }
+    }
+    return INSTANCE;
+}
+
+
+>>> Consistency Check
+  Calling Ollama for: consistency check
+    Prompt length: 2598 chars
+    Attempt 1/3
+    ✓ Response received: 542 chars
+    Consistency: False
+    Signature preserved: True
+    Problems found: 3
+      1. Synchronization block added around the inlined code changes the concurrency semantics of the original method
+      2. The original 'initialize()' method was not declared as synchronized, but the inlined version wraps its body in a synchronized block on 'Platform.class', which alters the thread-safety behavior
+      3. Method call replacement is correct, but adding synchronization changes the semantic meaning of the initialization logic
+    ✗ Consistency check failed
+      - Max retries reached, keeping original
+  ✗ Failed to inline org.platformlambda.core.system.Platform.initialize, keeping original body
+
+  Final hop-1 method body after all inlining:
+        public static Platform getInstance() {
+        initialize();
+        return INSTANCE;
+    }
+
+====================================================================================================
+PHASE 1: Inlining Hop-2 into Hop-1 Method: org.platformlambda.core.system.Platform.waitForProvider
+====================================================================================================
+  Found 1 hop-2 methods to inline:
+    - org.platformlambda.core.system.Platform.waitForProviders
+
+
+--------------------------------------------------------------------------------
+Inlining: org.platformlambda.core.system.Platform.waitForProviders
+--------------------------------------------------------------------------------
+  Original caller body:
+        public Future<Boolean> waitForProvider(String provider, int seconds) {
+        return waitForProviders(Collections.singletonList(provider), seconds);
+    }
+
+  Callee body to inline:
+        public Future<Boolean> waitForProviders(List<String> providers, int seconds) {
+        return Future.future(promise -> {
+            if (hasRoute(providers)) {
+                getEventExecutor().submit(() -> promise.complete(true));
+            } else {
+                getVertx().setTimer(2000, t ->
+                        waitForProviders(promise, providers, 0, Math.max(2, seconds) / 2));
+            }
+        });
+    }
+
+  Attempt 1/3
+  Calling Ollama for: initial inlining
+    Prompt length: 2346 chars
+    Attempt 1/3
+    ✓ Response received: 458 chars
+    Extracting code from response
+      Removed ```java``` markers
+      Extracted code: 446 chars
+    Inlined code:
+      public Future<Boolean> waitForProvider(String provider, int seconds) {
+    List<String> providers = Collections.singletonList(provider);
+    return Future.future(promise -> {
+        if (hasRoute(providers)) {
+            getEventExecutor().submit(() -> promise.complete(true));
+        } else {
+            getVertx().setTimer(2000, t ->
+                    waitForProviders(promise, providers, 0, Math.max(2, seconds) / 2));
+        }
+    });
+}
+
+
+>>> Consistency Check
+  Calling Ollama for: consistency check
+    Prompt length: 2123 chars
+    Attempt 1/3
+    ✓ Response received: 528 chars
+    Consistency: False
+    Signature preserved: True
+    Problems found: 3
+      1. The inlined method calls 'waitForProviders(promise, providers, 0, Math.max(2, seconds) / 2)' which is a different method signature than the original 'waitForProviders(List<String> providers, int seconds)'
+      2. The recursive call in the inlined version references a method with 4 parameters but the original method being inlined only has 2 parameters
+      3. Missing import statement for 'Future' class from vertx package
+    ✗ Consistency check failed
+      - Will retry with rewrite prompt
+  Attempt 2/3
+  Calling Ollama for: rewrite attempt 1
+    Prompt length: 2317 chars
+    Attempt 1/3
+    ✓ Response received: 774 chars
+    Extracting code from response
+      Removed ```java``` markers
+      Extracted code: 762 chars
+    Inlined code:
+      import io.vertx.core.Future;
+
+public Future<Boolean> waitForProvider(String provider, int seconds) {
+    List<String> providers = Collections.singletonList(provider);
+    return Future.future(promise -> {
+        if (hasRoute(providers)) {
+            getEventExecutor().submit(() -> promise.complete(true));
+        } else {
+            getVertx().setTimer(2000, t ->
+                    waitForProviders(Collections.singletonList(provider), seconds).onSuccess(result -> {
+                        if (result) {
+                            promise.complete(true);
+                        } else {
+                            waitForProviders(promise, providers, 0, Math.max(2, seconds) / 2);
+                        }
+                    }));
+        }
+    });
+}
+
+
+>>> Consistency Check
+  Calling Ollama for: consistency check
+    Prompt length: 2439 chars
+    Attempt 1/3
+    ✓ Response received: 422 chars
+    Consistency: False
+    Signature preserved: True
+    Problems found: 3
+      1. Incorrect recursive call in else branch - should call helper method waitForProviders(promise, providers, 0, Math.max(2, seconds) / 2) directly instead of recursive waitForProviders(Collections.singletonList(provider), seconds)
+      2. Missing import for java.util.Collections
+      3. Missing import for java.util.List
+    ✗ Consistency check failed
+      - Will retry with rewrite prompt
+  Attempt 3/3
+  Calling Ollama for: rewrite attempt 2
+    Prompt length: 2527 chars
+    Attempt 1/3
+    ✓ Response received: 541 chars
+    Extracting code from response
+      Removed ```java``` markers
+      Extracted code: 529 chars
+    Inlined code:
+      import io.vertx.core.Future;
+import java.util.Collections;
+import java.util.List;
+
+public Future<Boolean> waitForProvider(String provider, int seconds) {
+    List<String> providers = Collections.singletonList(provider);
+    return Future.future(promise -> {
+        if (hasRoute(providers)) {
+            getEventExecutor().submit(() -> promise.complete(true));
+        } else {
+            getVertx().setTimer(2000, t ->
+                    waitForProviders(promise, providers, 0, Math.max(2, seconds) / 2));
+        }
+    });
+}
+
+
+>>> Consistency Check
+  Calling Ollama for: consistency check
+    Prompt length: 2206 chars
+    Attempt 1/3
+    ✓ Response received: 700 chars
+    Consistency: False
+    Signature preserved: True
+    Problems found: 3
+      1. The inlined method calls 'waitForProviders(promise, providers, 0, Math.max(2, seconds) / 2)' which is not defined in the provided code. This appears to be a recursive call or another overload that was not included in the invoked method bodies.
+      2. Missing import for java.util.concurrent.ExecutorService or similar if getEventExecutor() returns such type, potentially causing compilation issue.
+      3. The method 'hasRoute' and 'getEventExecutor' and 'getVertx' are used but not defined or imported, assuming they are part of the class but this could cause issues if not available in scope.
+    ✗ Consistency check failed
+      - Max retries reached, keeping original
+  ✗ Failed to inline org.platformlambda.core.system.Platform.waitForProviders, keeping original body
+
+  Final hop-1 method body after all inlining:
+        public Future<Boolean> waitForProvider(String provider, int seconds) {
+        return waitForProviders(Collections.singletonList(provider), seconds);
+    }
+
+====================================================================================================
+PHASE 1: Inlining Hop-2 into Hop-1 Method: org.platformlambda.core.system.Platform.registerPrivate
+====================================================================================================
+  Found 1 hop-2 methods to inline:
+    - org.platformlambda.core.system.Platform.register
+
+
+--------------------------------------------------------------------------------
+Inlining: org.platformlambda.core.system.Platform.register
+--------------------------------------------------------------------------------
+  Original caller body:
+        public void registerPrivate(String route, TypedLambdaFunction lambda, int instances) throws IOException {
+        register(route, lambda, true, instances);
+    }
+
+  Callee body to inline:
+        public void register(String route, TypedLambdaFunction lambda, int instances) throws IOException {
+        register(route, lambda, false, instances);
+    }
+
+  Attempt 1/3
+  Calling Ollama for: initial inlining
+    Prompt length: 2067 chars
+    Attempt 1/3
+    ✓ Response received: 166 chars
+    Extracting code from response
+      Removed ```java``` markers
+      Extracted code: 154 chars
+    Inlined code:
+      public void registerPrivate(String route, TypedLambdaFunction lambda, int instances) throws IOException {
+    register(route, lambda, false, instances);
+}
+
+
+>>> Consistency Check
+  Calling Ollama for: consistency check
+    Prompt length: 1560 chars
+    Attempt 1/3
+    ✓ Response received: 395 chars
+    Consistency: False
+    Signature preserved: True
+    Problems found: 2
+      1. Semantic meaning not preserved: original method called register(route, lambda, true, instances) but inlined version calls register(route, lambda, false, instances)
+      2. Logic flow changed: the inlined method no longer passes 'true' as the third parameter which changes the method's behavior
+    ✗ Consistency check failed
+      - Will retry with rewrite prompt
+  Attempt 2/3
+  Calling Ollama for: rewrite attempt 1
+    Prompt length: 1630 chars
+    Attempt 1/3
+    ✓ Response received: 165 chars
+    Extracting code from response
+      Removed ```java``` markers
+      Extracted code: 153 chars
+    Inlined code:
+      public void registerPrivate(String route, TypedLambdaFunction lambda, int instances) throws IOException {
+    register(route, lambda, true, instances);
+}
+
+
+>>> Consistency Check
+  Calling Ollama for: consistency check
+    Prompt length: 1559 chars
+    Attempt 1/3
+    ✓ Response received: 82 chars
+    Consistency: True
+    Signature preserved: True
+    No problems found
+    ✓ Consistency check passed
+  ✓ Successfully inlined org.platformlambda.core.system.Platform.register
+
+  Final hop-1 method body after all inlining:
+    public void registerPrivate(String route, TypedLambdaFunction lambda, int instances) throws IOException {
+    register(route, lambda, true, instances);
+}
+
+====================================================================================================
+PHASE 1: Inlining Hop-2 into Hop-1 Method: org.platformlambda.hazelcast.services.PubSubManager.send
+====================================================================================================
+  No hop-2 methods to inline (or all are recursive)
+
+====================================================================================================
+PHASE 1: Inlining Hop-2 into Hop-1 Method: org.platformlambda.core.models.EventBlocks.size
+====================================================================================================
+  No hop-2 methods to inline (or all are recursive)
+
+====================================================================================================
+PHASE 1: Inlining Hop-2 into Hop-1 Method: org.platformlambda.spring.patch.OriginTrackedYamlLoader.getValue
+====================================================================================================
+  No hop-2 methods to inline (or all are recursive)
+
+====================================================================================================
+PHASE 2: Inlining Hop-1 into Test Method: org.platformlambda.core.MulticastTest.routingTest
+====================================================================================================
+  Found 9 hop-1 methods to inline:
+    - org.platformlambda.core.system.EventEmitter.getInstance
+    - org.platformlambda.core.system.AsyncObjectStreamReader.get
+    - org.platformlambda.core.models.EventBlocks.put
+    - org.platformlambda.core.system.Platform.getInstance
+    - org.platformlambda.core.system.Platform.waitForProvider
+    - org.platformlambda.core.system.Platform.registerPrivate
+    - org.platformlambda.hazelcast.services.PubSubManager.send
+    - org.platformlambda.core.models.EventBlocks.size
+    - org.platformlambda.spring.patch.OriginTrackedYamlLoader.getValue
+
+
+--------------------------------------------------------------------------------
+Inlining: org.platformlambda.core.system.EventEmitter.getInstance
+--------------------------------------------------------------------------------
+  Original caller body:
+        public void routingTest() throws IOException, InterruptedException {
+        final EventEmitter po = EventEmitter.getInstance();
+        final String[] targets = {"v1.hello.service.1", "v1.hello.service.2"};
+        final String TEXT = "ok";
+        final AtomicInteger counter = new AtomicInteger(0);
+        final BlockingQueue<Boolean> completion = new ArrayBlockingQueue<>(1);
+        final ConcurrentMap<String, Object> result = new ConcurrentHashMap<>();
+        LambdaFunction f = (headers, input, instance) -> {
+            String myRoute = headers.get(MY_ROUTE);
+            result.put(myRoute, input);
+            if (counter.incrementAndGet() == 2) {
+                completion.offer(true);
+            }
+            return true;
+        };
+        Platform platform = Platform.getInstance();
+        final BlockingQueue<Boolean> bench = new ArrayBlockingQueue<>(1);
+        platform.waitForProvider("v1.hello.world", 5).onSuccess(bench::offer);
+        boolean available = Boolean.TRUE.equals(bench.poll(5, TimeUnit.SECONDS));
+        Assert.assertTrue(available);
+        for (String t: targets) {
+            platform.registerPrivate(t, f, 1);
+        }
+        // Event targeted to v1.hello.world will be multicasted to v1.hello.service.1 and v1.hello.service.2
+        po.send("v1.hello.world", TEXT);
+        completion.poll(5, TimeUnit.SECONDS);
+        Assert.assertEquals(2, result.size());
+        for (Map.Entry<String, Object> kv: result.entrySet()) {
+            Assert.assertEquals(TEXT, kv.getValue());
+            log.info("Result from {} is correct", kv.getKey());
+        }
+    }
+
+  Callee body to inline:
+        public static EventEmitter getInstance() {
+        return INSTANCE;
+    }
+
+  Attempt 1/3
+  Calling Ollama for: initial inlining
+    Prompt length: 3442 chars
+    Attempt 1/3
+    ✓ Response received: 1606 chars
+    Extracting code from response
+      Removed ```java``` markers
+      Extracted code: 1590 chars
+    Inlined code:
+      public void routingTest() throws IOException, InterruptedException {
+        final EventEmitter po = INSTANCE;
+        final String[] targets = {"v1.hello.service.1", "v1.hello.service.2"};
+        final String TEXT = "ok";
+        final AtomicInteger counter = new AtomicInteger(0);
+        final BlockingQueue<Boolean> completion = new ArrayBlockingQueue<>(1);
+        final ConcurrentMap<String, Object> result = new ConcurrentHashMap<>();
+        LambdaFunction f = (headers, input, instance) -> {
+            String myRoute = headers.get(MY_ROUTE);
+            result.put(myRoute, input);
+            if (counter.incrementAndGet() == 2) {
+                completion.offer(true);
+            }
+            return true;
+        };
+        Platform platform = Platform.getInstance();
+        final BlockingQueue<Boolean> bench = new ArrayBlockingQueue<>(1);
+        platform.waitForProvider("v1.hello.world", 5).onSuccess(bench::offer);
+        boolean available = Boolean.TRUE.equals(bench.poll(5, TimeUnit.SECONDS));
+        Assert.assertTrue(available);
+        for (String t: targets) {
+            platform.registerPrivate(t, f, 1);
+        }
+        // Event targeted to v1.hello.world will be multicasted to v1.hello.service.1 and v1.hello.service.2
+        po.send("v1.hello.world", TEXT);
+        completion.poll(5, TimeUnit.SECONDS);
+        Assert.assertEquals(2, result.size());
+        for (Map.Entry<String, Object> kv: result.entrySet()) {
+            Assert.assertEquals(TEXT, kv.getValue());
+            log.info("Result from {} is correct", kv.getKey());
+        }
+    }
+
+
+>>> Consistency Check
+  Calling Ollama for: consistency check
+    Prompt length: 6962 chars
+    Attempt 1/3
+    ✓ Response received: 1057 chars
+    Consistency: False
+    Signature preserved: True
+    Problems found: 3
+      1. The inlined version does not replace all calls to static methods with their actual implementations; for example, `EventEmitter.getInstance()` is replaced with `INSTANCE`, but it should be fully inlined according to the provided method body which just returns the static field.
+      2. The method call `po.send("v1.hello.world", TEXT)` at the end of the inlined method refers to a `send` method on `EventEmitter`. However, none of the provided invoked method bodies correspond to this `send` operation being inlined. The closest match is a `send` method in `PubSubManager` that throws an exception, but that doesn't seem to be what's intended here based on context.
+      3. `Platform.getInstance()` is used multiple times in the original code and replaced directly with `Platform.getInstance()` again in the inlined version, instead of replacing it with its implementation (`initialize(); return INSTANCE;`). This means full inlining has not occurred.
+    ✗ Consistency check failed
+      - Will retry with rewrite prompt
+  Attempt 2/3
+  Calling Ollama for: rewrite attempt 1
+    Prompt length: 7683 chars
+    Attempt 1/3
+    ✓ Response received: 1668 chars
+    Extracting code from response
+      Removed ```java``` markers
+      Extracted code: 1656 chars
+    Inlined code:
+      public void routingTest() throws IOException, InterruptedException {
+        final EventEmitter po = EventEmitter.INSTANCE;
+        final String[] targets = {"v1.hello.service.1", "v1.hello.service.2"};
+        final String TEXT = "ok";
+        final AtomicInteger counter = new AtomicInteger(0);
+        final BlockingQueue<Boolean> completion = new ArrayBlockingQueue<>(1);
+        final ConcurrentMap<String, Object> result = new ConcurrentHashMap<>();
+        LambdaFunction f = (headers, input, instance) -> {
+            String myRoute = headers.get(MY_ROUTE);
+            result.put(myRoute, input);
+            if (counter.incrementAndGet() == 2) {
+                completion.offer(true);
+            }
+            return true;
+        };
+        Platform.initialize();
+        Platform platform = Platform.INSTANCE;
+        final BlockingQueue<Boolean> bench = new ArrayBlockingQueue<>(1);
+        platform.waitForProviders(Collections.singletonList("v1.hello.world"), 5).onSuccess(bench::offer);
+        boolean available = Boolean.TRUE.equals(bench.poll(5, TimeUnit.SECONDS));
+        Assert.assertTrue(available);
+        for (String t: targets) {
+            platform.register(t, f, true, 1);
+        }
+        // Event targeted to v1.hello.world will be multicasted to v1.hello.service.1 and v1.hello.service.2
+        po.send("v1.hello.world", TEXT);
+        completion.poll(5, TimeUnit.SECONDS);
+        Assert.assertEquals(2, result.size());
+        for (Map.Entry<String, Object> kv: result.entrySet()) {
+            Assert.assertEquals(TEXT, kv.getValue());
+            log.info("Result from {} is correct", kv.getKey());
+        }
+    }
+
+
+>>> Consistency Check
+  Calling Ollama for: consistency check
+    Prompt length: 7028 chars
+    Attempt 1/3
+    ✓ Response received: 82 chars
+    Consistency: True
+    Signature preserved: True
+    No problems found
+    ✓ Consistency check passed
+  ✓ Successfully inlined org.platformlambda.core.system.EventEmitter.getInstance
+
+--------------------------------------------------------------------------------
+Inlining: org.platformlambda.core.system.AsyncObjectStreamReader.get
+--------------------------------------------------------------------------------
+  Original caller body:
+    public void routingTest() throws IOException, InterruptedException {
+        final EventEmitter po = EventEmitter.INSTANCE;
+        final String[] targets = {"v1.hello.service.1", "v1.hello.service.2"};
+        final String TEXT = "ok";
+        final AtomicInteger counter = new AtomicInteger(0);
+        final BlockingQueue<Boolean> completion = new ArrayBlockingQueue<>(1);
+        final ConcurrentMap<String, Object> result = new ConcurrentHashMap<>();
+        LambdaFunction f = (headers, input, instance) -> {
+            String myRoute = headers.get(MY_ROUTE);
+            result.put(myRoute, input);
+            if (counter.incrementAndGet() == 2) {
+                completion.offer(true);
+            }
+            return true;
+        };
+        Platform.initialize();
+        Platform platform = Platform.INSTANCE;
+        final BlockingQueue<Boolean> bench = new ArrayBlockingQueue<>(1);
+        platform.waitForProviders(Collections.singletonList("v1.hello.world"), 5).onSuccess(bench::offer);
+        boolean available = Boolean.TRUE.equals(bench.poll(5, TimeUnit.SECONDS));
+        Assert.assertTrue(available);
+        for (String t: targets) {
+            platform.register(t, f, true, 1);
+        }
+        // Event targeted to v1.hello.world will be multicasted to v1.hello.service.1 and v1.hello.service.2
+        po.send("v1.hello.world", TEXT);
+        completion.poll(5, TimeUnit.SECONDS);
+        Assert.assertEquals(2, result.size());
+        for (Map.Entry<String, Object> kv: result.entrySet()) {
+            Assert.assertEquals(TEXT, kv.getValue());
+            log.info("Result from {} is correct", kv.getKey());
+        }
+    }
+
+  Callee body to inline:
+    public Future<Object> get() {
+    final EventEmitter po = EventEmitter.INSTANCE;
+    return Future.future(promise -> {
+        Platform.initialize();
+        Platform platform = Platform.INSTANCE;
+        if (eof || closed) {
+            platform.executor.submit(() -> promise.complete(null));
+        } else {
+            EventEnvelope request = new EventEnvelope().setTo(streamId).setHeader("type", "read");
+            try {
+                po.asyncRequest(request, timeout)
+                        .onSuccess(event -> {
+                            Map<String, String> headers = event.getHeaders();
+                            if ("data".equals(headers.get("type"))) {
+                                promise.complete(event.getBody());
+                            }
+                            if ("end_of_stream".equals(headers.get("type"))) {
+                                eof = true;
+                                promise.complete(null);
+                            }
+                        })
+                        .onFailure(promise::fail);
+
+            } catch (IOException e) {
+                Platform.getInstance().executor.submit(() -> promise.fail(e));
+            }
+        }
+    });
+}
+
+  Attempt 1/3
+  Calling Ollama for: initial inlining
+    Prompt length: 4611 chars
+    Attempt 1/3
+    ✓ Response received: 1668 chars
+    Extracting code from response
+      Removed ```java``` markers
+      Extracted code: 1656 chars
+    Inlined code:
+      public void routingTest() throws IOException, InterruptedException {
+        final EventEmitter po = EventEmitter.INSTANCE;
+        final String[] targets = {"v1.hello.service.1", "v1.hello.service.2"};
+        final String TEXT = "ok";
+        final AtomicInteger counter = new AtomicInteger(0);
+        final BlockingQueue<Boolean> completion = new ArrayBlockingQueue<>(1);
+        final ConcurrentMap<String, Object> result = new ConcurrentHashMap<>();
+        LambdaFunction f = (headers, input, instance) -> {
+            String myRoute = headers.get(MY_ROUTE);
+            result.put(myRoute, input);
+            if (counter.incrementAndGet() == 2) {
+                completion.offer(true);
+            }
+            return true;
+        };
+        Platform.initialize();
+        Platform platform = Platform.INSTANCE;
+        final BlockingQueue<Boolean> bench = new ArrayBlockingQueue<>(1);
+        platform.waitForProviders(Collections.singletonList("v1.hello.world"), 5).onSuccess(bench::offer);
+        boolean available = Boolean.TRUE.equals(bench.poll(5, TimeUnit.SECONDS));
+        Assert.assertTrue(available);
+        for (String t: targets) {
+            platform.register(t, f, true, 1);
+        }
+        // Event targeted to v1.hello.world will be multicasted to v1.hello.service.1 and v1.hello.service.2
+        po.send("v1.hello.world", TEXT);
+        completion.poll(5, TimeUnit.SECONDS);
+        Assert.assertEquals(2, result.size());
+        for (Map.Entry<String, Object> kv: result.entrySet()) {
+            Assert.assertEquals(TEXT, kv.getValue());
+            log.info("Result from {} is correct", kv.getKey());
+        }
+    }
+
+
+>>> Consistency Check
+  Calling Ollama for: consistency check
+    Prompt length: 7072 chars
+    Attempt 1/3
+    ✓ Response received: 68 chars
+    Consistency: True
+    Signature preserved: True
+    No problems found
+    ✓ Consistency check passed
+  ✓ Successfully inlined org.platformlambda.core.system.AsyncObjectStreamReader.get
+
+--------------------------------------------------------------------------------
+Inlining: org.platformlambda.core.models.EventBlocks.put
+--------------------------------------------------------------------------------
+  Original caller body:
+    public void routingTest() throws IOException, InterruptedException {
+        final EventEmitter po = EventEmitter.INSTANCE;
+        final String[] targets = {"v1.hello.service.1", "v1.hello.service.2"};
+        final String TEXT = "ok";
+        final AtomicInteger counter = new AtomicInteger(0);
+        final BlockingQueue<Boolean> completion = new ArrayBlockingQueue<>(1);
+        final ConcurrentMap<String, Object> result = new ConcurrentHashMap<>();
+        LambdaFunction f = (headers, input, instance) -> {
+            String myRoute = headers.get(MY_ROUTE);
+            result.put(myRoute, input);
+            if (counter.incrementAndGet() == 2) {
+                completion.offer(true);
+            }
+            return true;
+        };
+        Platform.initialize();
+        Platform platform = Platform.INSTANCE;
+        final BlockingQueue<Boolean> bench = new ArrayBlockingQueue<>(1);
+        platform.waitForProviders(Collections.singletonList("v1.hello.world"), 5).onSuccess(bench::offer);
+        boolean available = Boolean.TRUE.equals(bench.poll(5, TimeUnit.SECONDS));
+        Assert.assertTrue(available);
+        for (String t: targets) {
+            platform.register(t, f, true, 1);
+        }
+        // Event targeted to v1.hello.world will be multicasted to v1.hello.service.1 and v1.hello.service.2
+        po.send("v1.hello.world", TEXT);
+        completion.poll(5, TimeUnit.SECONDS);
+        Assert.assertEquals(2, result.size());
+        for (Map.Entry<String, Object> kv: result.entrySet()) {
+            Assert.assertEquals(TEXT, kv.getValue());
+            log.info("Result from {} is correct", kv.getKey());
+        }
+    }
+
+  Callee body to inline:
+        public void put(int n, byte[] block) {
+        buffer.put(n, block);
+    }
+
+  Attempt 1/3
+  Calling Ollama for: initial inlining
+    Prompt length: 3470 chars
+    Attempt 1/3
+    ✓ Response received: 1668 chars
+    Extracting code from response
+      Removed ```java``` markers
+      Extracted code: 1656 chars
+    Inlined code:
+      public void routingTest() throws IOException, InterruptedException {
+        final EventEmitter po = EventEmitter.INSTANCE;
+        final String[] targets = {"v1.hello.service.1", "v1.hello.service.2"};
+        final String TEXT = "ok";
+        final AtomicInteger counter = new AtomicInteger(0);
+        final BlockingQueue<Boolean> completion = new ArrayBlockingQueue<>(1);
+        final ConcurrentMap<String, Object> result = new ConcurrentHashMap<>();
+        LambdaFunction f = (headers, input, instance) -> {
+            String myRoute = headers.get(MY_ROUTE);
+            result.put(myRoute, input);
+            if (counter.incrementAndGet() == 2) {
+                completion.offer(true);
+            }
+            return true;
+        };
+        Platform.initialize();
+        Platform platform = Platform.INSTANCE;
+        final BlockingQueue<Boolean> bench = new ArrayBlockingQueue<>(1);
+        platform.waitForProviders(Collections.singletonList("v1.hello.world"), 5).onSuccess(bench::offer);
+        boolean available = Boolean.TRUE.equals(bench.poll(5, TimeUnit.SECONDS));
+        Assert.assertTrue(available);
+        for (String t: targets) {
+            platform.register(t, f, true, 1);
+        }
+        // Event targeted to v1.hello.world will be multicasted to v1.hello.service.1 and v1.hello.service.2
+        po.send("v1.hello.world", TEXT);
+        completion.poll(5, TimeUnit.SECONDS);
+        Assert.assertEquals(2, result.size());
+        for (Map.Entry<String, Object> kv: result.entrySet()) {
+            Assert.assertEquals(TEXT, kv.getValue());
+            log.info("Result from {} is correct", kv.getKey());
+        }
+    }
+
+
+>>> Consistency Check
+  Calling Ollama for: consistency check
+    Prompt length: 7072 chars
+    Attempt 1/3
+    ✓ Response received: 68 chars
+    Consistency: True
+    Signature preserved: True
+    No problems found
+    ✓ Consistency check passed
+  ✓ Successfully inlined org.platformlambda.core.models.EventBlocks.put
+
+--------------------------------------------------------------------------------
+Inlining: org.platformlambda.core.system.Platform.getInstance
+--------------------------------------------------------------------------------
+  Original caller body:
+    public void routingTest() throws IOException, InterruptedException {
+        final EventEmitter po = EventEmitter.INSTANCE;
+        final String[] targets = {"v1.hello.service.1", "v1.hello.service.2"};
+        final String TEXT = "ok";
+        final AtomicInteger counter = new AtomicInteger(0);
+        final BlockingQueue<Boolean> completion = new ArrayBlockingQueue<>(1);
+        final ConcurrentMap<String, Object> result = new ConcurrentHashMap<>();
+        LambdaFunction f = (headers, input, instance) -> {
+            String myRoute = headers.get(MY_ROUTE);
+            result.put(myRoute, input);
+            if (counter.incrementAndGet() == 2) {
+                completion.offer(true);
+            }
+            return true;
+        };
+        Platform.initialize();
+        Platform platform = Platform.INSTANCE;
+        final BlockingQueue<Boolean> bench = new ArrayBlockingQueue<>(1);
+        platform.waitForProviders(Collections.singletonList("v1.hello.world"), 5).onSuccess(bench::offer);
+        boolean available = Boolean.TRUE.equals(bench.poll(5, TimeUnit.SECONDS));
+        Assert.assertTrue(available);
+        for (String t: targets) {
+            platform.register(t, f, true, 1);
+        }
+        // Event targeted to v1.hello.world will be multicasted to v1.hello.service.1 and v1.hello.service.2
+        po.send("v1.hello.world", TEXT);
+        completion.poll(5, TimeUnit.SECONDS);
+        Assert.assertEquals(2, result.size());
+        for (Map.Entry<String, Object> kv: result.entrySet()) {
+            Assert.assertEquals(TEXT, kv.getValue());
+            log.info("Result from {} is correct", kv.getKey());
+        }
+    }
+
+  Callee body to inline:
+        public static Platform getInstance() {
+        initialize();
+        return INSTANCE;
+    }
+
+  Attempt 1/3
+  Calling Ollama for: initial inlining
+    Prompt length: 3500 chars
+    Attempt 1/3
+    ✓ Response received: 1668 chars
+    Extracting code from response
+      Removed ```java``` markers
+      Extracted code: 1656 chars
+    Inlined code:
+      public void routingTest() throws IOException, InterruptedException {
+        final EventEmitter po = EventEmitter.INSTANCE;
+        final String[] targets = {"v1.hello.service.1", "v1.hello.service.2"};
+        final String TEXT = "ok";
+        final AtomicInteger counter = new AtomicInteger(0);
+        final BlockingQueue<Boolean> completion = new ArrayBlockingQueue<>(1);
+        final ConcurrentMap<String, Object> result = new ConcurrentHashMap<>();
+        LambdaFunction f = (headers, input, instance) -> {
+            String myRoute = headers.get(MY_ROUTE);
+            result.put(myRoute, input);
+            if (counter.incrementAndGet() == 2) {
+                completion.offer(true);
+            }
+            return true;
+        };
+        Platform.initialize();
+        Platform platform = Platform.INSTANCE;
+        final BlockingQueue<Boolean> bench = new ArrayBlockingQueue<>(1);
+        platform.waitForProviders(Collections.singletonList("v1.hello.world"), 5).onSuccess(bench::offer);
+        boolean available = Boolean.TRUE.equals(bench.poll(5, TimeUnit.SECONDS));
+        Assert.assertTrue(available);
+        for (String t: targets) {
+            platform.register(t, f, true, 1);
+        }
+        // Event targeted to v1.hello.world will be multicasted to v1.hello.service.1 and v1.hello.service.2
+        po.send("v1.hello.world", TEXT);
+        completion.poll(5, TimeUnit.SECONDS);
+        Assert.assertEquals(2, result.size());
+        for (Map.Entry<String, Object> kv: result.entrySet()) {
+            Assert.assertEquals(TEXT, kv.getValue());
+            log.info("Result from {} is correct", kv.getKey());
+        }
+    }
+
+
+>>> Consistency Check
+  Calling Ollama for: consistency check
+    Prompt length: 7072 chars
+    Attempt 1/3
+    ✓ Response received: 82 chars
+    Consistency: True
+    Signature preserved: True
+    No problems found
+    ✓ Consistency check passed
+  ✓ Successfully inlined org.platformlambda.core.system.Platform.getInstance
+
+--------------------------------------------------------------------------------
+Inlining: org.platformlambda.core.system.Platform.waitForProvider
+--------------------------------------------------------------------------------
+  Original caller body:
+    public void routingTest() throws IOException, InterruptedException {
+        final EventEmitter po = EventEmitter.INSTANCE;
+        final String[] targets = {"v1.hello.service.1", "v1.hello.service.2"};
+        final String TEXT = "ok";
+        final AtomicInteger counter = new AtomicInteger(0);
+        final BlockingQueue<Boolean> completion = new ArrayBlockingQueue<>(1);
+        final ConcurrentMap<String, Object> result = new ConcurrentHashMap<>();
+        LambdaFunction f = (headers, input, instance) -> {
+            String myRoute = headers.get(MY_ROUTE);
+            result.put(myRoute, input);
+            if (counter.incrementAndGet() == 2) {
+                completion.offer(true);
+            }
+            return true;
+        };
+        Platform.initialize();
+        Platform platform = Platform.INSTANCE;
+        final BlockingQueue<Boolean> bench = new ArrayBlockingQueue<>(1);
+        platform.waitForProviders(Collections.singletonList("v1.hello.world"), 5).onSuccess(bench::offer);
+        boolean available = Boolean.TRUE.equals(bench.poll(5, TimeUnit.SECONDS));
+        Assert.assertTrue(available);
+        for (String t: targets) {
+            platform.register(t, f, true, 1);
+        }
+        // Event targeted to v1.hello.world will be multicasted to v1.hello.service.1 and v1.hello.service.2
+        po.send("v1.hello.world", TEXT);
+        completion.poll(5, TimeUnit.SECONDS);
+        Assert.assertEquals(2, result.size());
+        for (Map.Entry<String, Object> kv: result.entrySet()) {
+            Assert.assertEquals(TEXT, kv.getValue());
+            log.info("Result from {} is correct", kv.getKey());
+        }
+    }
+
+  Callee body to inline:
+        public Future<Boolean> waitForProvider(String provider, int seconds) {
+        return waitForProviders(Collections.singletonList(provider), seconds);
+    }
+
+  Attempt 1/3
+  Calling Ollama for: initial inlining
+    Prompt length: 3572 chars
+    Attempt 1/3
+    ✓ Response received: 1668 chars
+    Extracting code from response
+      Removed ```java``` markers
+      Extracted code: 1656 chars
+    Inlined code:
+      public void routingTest() throws IOException, InterruptedException {
+        final EventEmitter po = EventEmitter.INSTANCE;
+        final String[] targets = {"v1.hello.service.1", "v1.hello.service.2"};
+        final String TEXT = "ok";
+        final AtomicInteger counter = new AtomicInteger(0);
+        final BlockingQueue<Boolean> completion = new ArrayBlockingQueue<>(1);
+        final ConcurrentMap<String, Object> result = new ConcurrentHashMap<>();
+        LambdaFunction f = (headers, input, instance) -> {
+            String myRoute = headers.get(MY_ROUTE);
+            result.put(myRoute, input);
+            if (counter.incrementAndGet() == 2) {
+                completion.offer(true);
+            }
+            return true;
+        };
+        Platform.initialize();
+        Platform platform = Platform.INSTANCE;
+        final BlockingQueue<Boolean> bench = new ArrayBlockingQueue<>(1);
+        platform.waitForProviders(Collections.singletonList("v1.hello.world"), 5).onSuccess(bench::offer);
+        boolean available = Boolean.TRUE.equals(bench.poll(5, TimeUnit.SECONDS));
+        Assert.assertTrue(available);
+        for (String t: targets) {
+            platform.register(t, f, true, 1);
+        }
+        // Event targeted to v1.hello.world will be multicasted to v1.hello.service.1 and v1.hello.service.2
+        po.send("v1.hello.world", TEXT);
+        completion.poll(5, TimeUnit.SECONDS);
+        Assert.assertEquals(2, result.size());
+        for (Map.Entry<String, Object> kv: result.entrySet()) {
+            Assert.assertEquals(TEXT, kv.getValue());
+            log.info("Result from {} is correct", kv.getKey());
+        }
+    }
+
+
+>>> Consistency Check
+  Calling Ollama for: consistency check
+    Prompt length: 7072 chars
+    Attempt 1/3
+    ✓ Response received: 82 chars
+    Consistency: True
+    Signature preserved: True
+    No problems found
+    ✓ Consistency check passed
+  ✓ Successfully inlined org.platformlambda.core.system.Platform.waitForProvider
+
+--------------------------------------------------------------------------------
+Inlining: org.platformlambda.core.system.Platform.registerPrivate
+--------------------------------------------------------------------------------
+  Original caller body:
+    public void routingTest() throws IOException, InterruptedException {
+        final EventEmitter po = EventEmitter.INSTANCE;
+        final String[] targets = {"v1.hello.service.1", "v1.hello.service.2"};
+        final String TEXT = "ok";
+        final AtomicInteger counter = new AtomicInteger(0);
+        final BlockingQueue<Boolean> completion = new ArrayBlockingQueue<>(1);
+        final ConcurrentMap<String, Object> result = new ConcurrentHashMap<>();
+        LambdaFunction f = (headers, input, instance) -> {
+            String myRoute = headers.get(MY_ROUTE);
+            result.put(myRoute, input);
+            if (counter.incrementAndGet() == 2) {
+                completion.offer(true);
+            }
+            return true;
+        };
+        Platform.initialize();
+        Platform platform = Platform.INSTANCE;
+        final BlockingQueue<Boolean> bench = new ArrayBlockingQueue<>(1);
+        platform.waitForProviders(Collections.singletonList("v1.hello.world"), 5).onSuccess(bench::offer);
+        boolean available = Boolean.TRUE.equals(bench.poll(5, TimeUnit.SECONDS));
+        Assert.assertTrue(available);
+        for (String t: targets) {
+            platform.register(t, f, true, 1);
+        }
+        // Event targeted to v1.hello.world will be multicasted to v1.hello.service.1 and v1.hello.service.2
+        po.send("v1.hello.world", TEXT);
+        completion.poll(5, TimeUnit.SECONDS);
+        Assert.assertEquals(2, result.size());
+        for (Map.Entry<String, Object> kv: result.entrySet()) {
+            Assert.assertEquals(TEXT, kv.getValue());
+            log.info("Result from {} is correct", kv.getKey());
+        }
+    }
+
+  Callee body to inline:
+    public void registerPrivate(String route, TypedLambdaFunction lambda, int instances) throws IOException {
+    register(route, lambda, true, instances);
+}
+
+  Attempt 1/3
+  Calling Ollama for: initial inlining
+    Prompt length: 3566 chars
+    Attempt 1/3
+    ✓ Response received: 1668 chars
+    Extracting code from response
+      Removed ```java``` markers
+      Extracted code: 1656 chars
+    Inlined code:
+      public void routingTest() throws IOException, InterruptedException {
+        final EventEmitter po = EventEmitter.INSTANCE;
+        final String[] targets = {"v1.hello.service.1", "v1.hello.service.2"};
+        final String TEXT = "ok";
+        final AtomicInteger counter = new AtomicInteger(0);
+        final BlockingQueue<Boolean> completion = new ArrayBlockingQueue<>(1);
+        final ConcurrentMap<String, Object> result = new ConcurrentHashMap<>();
+        LambdaFunction f = (headers, input, instance) -> {
+            String myRoute = headers.get(MY_ROUTE);
+            result.put(myRoute, input);
+            if (counter.incrementAndGet() == 2) {
+                completion.offer(true);
+            }
+            return true;
+        };
+        Platform.initialize();
+        Platform platform = Platform.INSTANCE;
+        final BlockingQueue<Boolean> bench = new ArrayBlockingQueue<>(1);
+        platform.waitForProviders(Collections.singletonList("v1.hello.world"), 5).onSuccess(bench::offer);
+        boolean available = Boolean.TRUE.equals(bench.poll(5, TimeUnit.SECONDS));
+        Assert.assertTrue(available);
+        for (String t: targets) {
+            platform.register(t, f, true, 1);
+        }
+        // Event targeted to v1.hello.world will be multicasted to v1.hello.service.1 and v1.hello.service.2
+        po.send("v1.hello.world", TEXT);
+        completion.poll(5, TimeUnit.SECONDS);
+        Assert.assertEquals(2, result.size());
+        for (Map.Entry<String, Object> kv: result.entrySet()) {
+            Assert.assertEquals(TEXT, kv.getValue());
+            log.info("Result from {} is correct", kv.getKey());
+        }
+    }
+
+
+>>> Consistency Check
+  Calling Ollama for: consistency check
+    Prompt length: 7072 chars
+    Attempt 1/3
+    ✓ Response received: 82 chars
+    Consistency: True
+    Signature preserved: True
+    No problems found
+    ✓ Consistency check passed
+  ✓ Successfully inlined org.platformlambda.core.system.Platform.registerPrivate
+
+--------------------------------------------------------------------------------
+Inlining: org.platformlambda.hazelcast.services.PubSubManager.send
+--------------------------------------------------------------------------------
+  Original caller body:
+    public void routingTest() throws IOException, InterruptedException {
+        final EventEmitter po = EventEmitter.INSTANCE;
+        final String[] targets = {"v1.hello.service.1", "v1.hello.service.2"};
+        final String TEXT = "ok";
+        final AtomicInteger counter = new AtomicInteger(0);
+        final BlockingQueue<Boolean> completion = new ArrayBlockingQueue<>(1);
+        final ConcurrentMap<String, Object> result = new ConcurrentHashMap<>();
+        LambdaFunction f = (headers, input, instance) -> {
+            String myRoute = headers.get(MY_ROUTE);
+            result.put(myRoute, input);
+            if (counter.incrementAndGet() == 2) {
+                completion.offer(true);
+            }
+            return true;
+        };
+        Platform.initialize();
+        Platform platform = Platform.INSTANCE;
+        final BlockingQueue<Boolean> bench = new ArrayBlockingQueue<>(1);
+        platform.waitForProviders(Collections.singletonList("v1.hello.world"), 5).onSuccess(bench::offer);
+        boolean available = Boolean.TRUE.equals(bench.poll(5, TimeUnit.SECONDS));
+        Assert.assertTrue(available);
+        for (String t: targets) {
+            platform.register(t, f, true, 1);
+        }
+        // Event targeted to v1.hello.world will be multicasted to v1.hello.service.1 and v1.hello.service.2
+        po.send("v1.hello.world", TEXT);
+        completion.poll(5, TimeUnit.SECONDS);
+        Assert.assertEquals(2, result.size());
+        for (Map.Entry<String, Object> kv: result.entrySet()) {
+            Assert.assertEquals(TEXT, kv.getValue());
+            log.info("Result from {} is correct", kv.getKey());
+        }
+    }
+
+  Callee body to inline:
+        public void send(String queue, Map<String, String> headers, Object body) throws IOException {
+        throw new IOException("Not implemented");
+    }
+
+  Attempt 1/3
+  Calling Ollama for: initial inlining
+    Prompt length: 3556 chars
+    Attempt 1/3
+    ✓ Response received: 1871 chars
+    Extracting code from response
+      Removed ```java``` markers
+      Extracted code: 1859 chars
+    Inlined code:
+      public void routingTest() throws IOException, InterruptedException {
+        final EventEmitter po = EventEmitter.INSTANCE;
+        final String[] targets = {"v1.hello.service.1", "v1.hello.service.2"};
+        final String TEXT = "ok";
+        final AtomicInteger counter = new AtomicInteger(0);
+        final BlockingQueue<Boolean> completion = new ArrayBlockingQueue<>(1);
+        final ConcurrentMap<String, Object> result = new ConcurrentHashMap<>();
+        LambdaFunction f = (headers, input, instance) -> {
+            String myRoute = headers.get(MY_ROUTE);
+            result.put(myRoute, input);
+            if (counter.incrementAndGet() == 2) {
+                completion.offer(true);
+            }
+            return true;
+        };
+        Platform.initialize();
+        Platform platform = Platform.INSTANCE;
+        final BlockingQueue<Boolean> bench = new ArrayBlockingQueue<>(1);
+        platform.waitForProviders(Collections.singletonList("v1.hello.world"), 5).onSuccess(bench::offer);
+        boolean available = Boolean.TRUE.equals(bench.poll(5, TimeUnit.SECONDS));
+        Assert.assertTrue(available);
+        for (String t: targets) {
+            platform.register(t, f, true, 1);
+        }
+        // Event targeted to v1.hello.world will be multicasted to v1.hello.service.1 and v1.hello.service.2
+        {
+            String __inlined_send_queue = "v1.hello.world";
+            Map<String, String> __inlined_send_headers = null;
+            Object __inlined_send_body = TEXT;
+            throw new IOException("Not implemented");
+        }
+        completion.poll(5, TimeUnit.SECONDS);
+        Assert.assertEquals(2, result.size());
+        for (Map.Entry<String, Object> kv: result.entrySet()) {
+            Assert.assertEquals(TEXT, kv.getValue());
+            log.info("Result from {} is correct", kv.getKey());
+        }
+    }
+
+
+>>> Consistency Check
+  Calling Ollama for: consistency check
+    Prompt length: 7275 chars
+    Attempt 1/3
+    ✓ Response received: 785 chars
+    Consistency: False
+    Signature preserved: True
+    Problems found: 4
+      1. The inlined version of `po.send("v1.hello.world", TEXT)` was replaced with the body of `org.platformlambda.hazelcast.services.PubSubManager.send`, which unconditionally throws an IOException with message "Not implemented".
+      2. This replacement changes the semantic behavior of the original code, which intended to send an event, not throw an exception.
+      3. Inlining incorrectly substituted a method (`send`) that has a different implementation than what was originally being called.
+      4. The original method call `po.send(...)` would have resolved to some working implementation of send in `EventEmitter`, not the Hazelcast-specific one that throws an exception.
+    ✗ Consistency check failed
+      - Will retry with rewrite prompt
+  Attempt 2/3
+  Calling Ollama for: rewrite attempt 1
+    Prompt length: 7713 chars
+    Attempt 1/3
+    ✓ Response received: 1668 chars
+    Extracting code from response
+      Removed ```java``` markers
+      Extracted code: 1656 chars
+    Inlined code:
+      public void routingTest() throws IOException, InterruptedException {
+        final EventEmitter po = EventEmitter.INSTANCE;
+        final String[] targets = {"v1.hello.service.1", "v1.hello.service.2"};
+        final String TEXT = "ok";
+        final AtomicInteger counter = new AtomicInteger(0);
+        final BlockingQueue<Boolean> completion = new ArrayBlockingQueue<>(1);
+        final ConcurrentMap<String, Object> result = new ConcurrentHashMap<>();
+        LambdaFunction f = (headers, input, instance) -> {
+            String myRoute = headers.get(MY_ROUTE);
+            result.put(myRoute, input);
+            if (counter.incrementAndGet() == 2) {
+                completion.offer(true);
+            }
+            return true;
+        };
+        Platform.initialize();
+        Platform platform = Platform.INSTANCE;
+        final BlockingQueue<Boolean> bench = new ArrayBlockingQueue<>(1);
+        platform.waitForProviders(Collections.singletonList("v1.hello.world"), 5).onSuccess(bench::offer);
+        boolean available = Boolean.TRUE.equals(bench.poll(5, TimeUnit.SECONDS));
+        Assert.assertTrue(available);
+        for (String t: targets) {
+            platform.register(t, f, true, 1);
+        }
+        // Event targeted to v1.hello.world will be multicasted to v1.hello.service.1 and v1.hello.service.2
+        po.send("v1.hello.world", TEXT);
+        completion.poll(5, TimeUnit.SECONDS);
+        Assert.assertEquals(2, result.size());
+        for (Map.Entry<String, Object> kv: result.entrySet()) {
+            Assert.assertEquals(TEXT, kv.getValue());
+            log.info("Result from {} is correct", kv.getKey());
+        }
+    }
+
+
+>>> Consistency Check
+  Calling Ollama for: consistency check
+    Prompt length: 7072 chars
+    Attempt 1/3
+    ✓ Response received: 68 chars
+    Consistency: True
+    Signature preserved: True
+    No problems found
+    ✓ Consistency check passed
+  ✓ Successfully inlined org.platformlambda.hazelcast.services.PubSubManager.send
+
+--------------------------------------------------------------------------------
+Inlining: org.platformlambda.core.models.EventBlocks.size
+--------------------------------------------------------------------------------
+  Original caller body:
+    public void routingTest() throws IOException, InterruptedException {
+        final EventEmitter po = EventEmitter.INSTANCE;
+        final String[] targets = {"v1.hello.service.1", "v1.hello.service.2"};
+        final String TEXT = "ok";
+        final AtomicInteger counter = new AtomicInteger(0);
+        final BlockingQueue<Boolean> completion = new ArrayBlockingQueue<>(1);
+        final ConcurrentMap<String, Object> result = new ConcurrentHashMap<>();
+        LambdaFunction f = (headers, input, instance) -> {
+            String myRoute = headers.get(MY_ROUTE);
+            result.put(myRoute, input);
+            if (counter.incrementAndGet() == 2) {
+                completion.offer(true);
+            }
+            return true;
+        };
+        Platform.initialize();
+        Platform platform = Platform.INSTANCE;
+        final BlockingQueue<Boolean> bench = new ArrayBlockingQueue<>(1);
+        platform.waitForProviders(Collections.singletonList("v1.hello.world"), 5).onSuccess(bench::offer);
+        boolean available = Boolean.TRUE.equals(bench.poll(5, TimeUnit.SECONDS));
+        Assert.assertTrue(available);
+        for (String t: targets) {
+            platform.register(t, f, true, 1);
+        }
+        // Event targeted to v1.hello.world will be multicasted to v1.hello.service.1 and v1.hello.service.2
+        po.send("v1.hello.world", TEXT);
+        completion.poll(5, TimeUnit.SECONDS);
+        Assert.assertEquals(2, result.size());
+        for (Map.Entry<String, Object> kv: result.entrySet()) {
+            Assert.assertEquals(TEXT, kv.getValue());
+            log.info("Result from {} is correct", kv.getKey());
+        }
+    }
+
+  Callee body to inline:
+        public int size() {
+        return buffer.size();
+    }
+
+  Attempt 1/3
+  Calling Ollama for: initial inlining
+    Prompt length: 3453 chars
+    Attempt 1/3
+    ✓ Response received: 1668 chars
+    Extracting code from response
+      Removed ```java``` markers
+      Extracted code: 1656 chars
+    Inlined code:
+      public void routingTest() throws IOException, InterruptedException {
+        final EventEmitter po = EventEmitter.INSTANCE;
+        final String[] targets = {"v1.hello.service.1", "v1.hello.service.2"};
+        final String TEXT = "ok";
+        final AtomicInteger counter = new AtomicInteger(0);
+        final BlockingQueue<Boolean> completion = new ArrayBlockingQueue<>(1);
+        final ConcurrentMap<String, Object> result = new ConcurrentHashMap<>();
+        LambdaFunction f = (headers, input, instance) -> {
+            String myRoute = headers.get(MY_ROUTE);
+            result.put(myRoute, input);
+            if (counter.incrementAndGet() == 2) {
+                completion.offer(true);
+            }
+            return true;
+        };
+        Platform.initialize();
+        Platform platform = Platform.INSTANCE;
+        final BlockingQueue<Boolean> bench = new ArrayBlockingQueue<>(1);
+        platform.waitForProviders(Collections.singletonList("v1.hello.world"), 5).onSuccess(bench::offer);
+        boolean available = Boolean.TRUE.equals(bench.poll(5, TimeUnit.SECONDS));
+        Assert.assertTrue(available);
+        for (String t: targets) {
+            platform.register(t, f, true, 1);
+        }
+        // Event targeted to v1.hello.world will be multicasted to v1.hello.service.1 and v1.hello.service.2
+        po.send("v1.hello.world", TEXT);
+        completion.poll(5, TimeUnit.SECONDS);
+        Assert.assertEquals(2, result.size());
+        for (Map.Entry<String, Object> kv: result.entrySet()) {
+            Assert.assertEquals(TEXT, kv.getValue());
+            log.info("Result from {} is correct", kv.getKey());
+        }
+    }
+
+
+>>> Consistency Check
+  Calling Ollama for: consistency check
+    Prompt length: 7072 chars
+    Attempt 1/3
+    ✓ Response received: 82 chars
+    Consistency: True
+    Signature preserved: True
+    No problems found
+    ✓ Consistency check passed
+  ✓ Successfully inlined org.platformlambda.core.models.EventBlocks.size
+
+--------------------------------------------------------------------------------
+Inlining: org.platformlambda.spring.patch.OriginTrackedYamlLoader.getValue
+--------------------------------------------------------------------------------
+  Original caller body:
+    public void routingTest() throws IOException, InterruptedException {
+        final EventEmitter po = EventEmitter.INSTANCE;
+        final String[] targets = {"v1.hello.service.1", "v1.hello.service.2"};
+        final String TEXT = "ok";
+        final AtomicInteger counter = new AtomicInteger(0);
+        final BlockingQueue<Boolean> completion = new ArrayBlockingQueue<>(1);
+        final ConcurrentMap<String, Object> result = new ConcurrentHashMap<>();
+        LambdaFunction f = (headers, input, instance) -> {
+            String myRoute = headers.get(MY_ROUTE);
+            result.put(myRoute, input);
+            if (counter.incrementAndGet() == 2) {
+                completion.offer(true);
+            }
+            return true;
+        };
+        Platform.initialize();
+        Platform platform = Platform.INSTANCE;
+        final BlockingQueue<Boolean> bench = new ArrayBlockingQueue<>(1);
+        platform.waitForProviders(Collections.singletonList("v1.hello.world"), 5).onSuccess(bench::offer);
+        boolean available = Boolean.TRUE.equals(bench.poll(5, TimeUnit.SECONDS));
+        Assert.assertTrue(available);
+        for (String t: targets) {
+            platform.register(t, f, true, 1);
+        }
+        // Event targeted to v1.hello.world will be multicasted to v1.hello.service.1 and v1.hello.service.2
+        po.send("v1.hello.world", TEXT);
+        completion.poll(5, TimeUnit.SECONDS);
+        Assert.assertEquals(2, result.size());
+        for (Map.Entry<String, Object> kv: result.entrySet()) {
+            Assert.assertEquals(TEXT, kv.getValue());
+            log.info("Result from {} is correct", kv.getKey());
+        }
+    }
+
+  Callee body to inline:
+            private Object getValue(Object value) {
+            return (value != null) ? value : "";
+        }
+
+  Attempt 1/3
+  Calling Ollama for: initial inlining
+    Prompt length: 3521 chars
+    Attempt 1/3
+    ✓ Response received: 1668 chars
+    Extracting code from response
+      Removed ```java``` markers
+      Extracted code: 1656 chars
+    Inlined code:
+      public void routingTest() throws IOException, InterruptedException {
+        final EventEmitter po = EventEmitter.INSTANCE;
+        final String[] targets = {"v1.hello.service.1", "v1.hello.service.2"};
+        final String TEXT = "ok";
+        final AtomicInteger counter = new AtomicInteger(0);
+        final BlockingQueue<Boolean> completion = new ArrayBlockingQueue<>(1);
+        final ConcurrentMap<String, Object> result = new ConcurrentHashMap<>();
+        LambdaFunction f = (headers, input, instance) -> {
+            String myRoute = headers.get(MY_ROUTE);
+            result.put(myRoute, input);
+            if (counter.incrementAndGet() == 2) {
+                completion.offer(true);
+            }
+            return true;
+        };
+        Platform.initialize();
+        Platform platform = Platform.INSTANCE;
+        final BlockingQueue<Boolean> bench = new ArrayBlockingQueue<>(1);
+        platform.waitForProviders(Collections.singletonList("v1.hello.world"), 5).onSuccess(bench::offer);
+        boolean available = Boolean.TRUE.equals(bench.poll(5, TimeUnit.SECONDS));
+        Assert.assertTrue(available);
+        for (String t: targets) {
+            platform.register(t, f, true, 1);
+        }
+        // Event targeted to v1.hello.world will be multicasted to v1.hello.service.1 and v1.hello.service.2
+        po.send("v1.hello.world", TEXT);
+        completion.poll(5, TimeUnit.SECONDS);
+        Assert.assertEquals(2, result.size());
+        for (Map.Entry<String, Object> kv: result.entrySet()) {
+            Assert.assertEquals(TEXT, kv.getValue());
+            log.info("Result from {} is correct", kv.getKey());
+        }
+    }
+
+
+>>> Consistency Check
+  Calling Ollama for: consistency check
+    Prompt length: 7072 chars
+    Attempt 1/3
+    ✓ Response received: 68 chars
+    Consistency: True
+    Signature preserved: True
+    No problems found
+    ✓ Consistency check passed
+  ✓ Successfully inlined org.platformlambda.spring.patch.OriginTrackedYamlLoader.getValue
+
+  Final test method body after all inlining:
+    public void routingTest() throws IOException, InterruptedException {
+        final EventEmitter po = EventEmitter.INSTANCE;
+        final String[] targets = {"v1.hello.service.1", "v1.hello.service.2"};
+        final String TEXT = "ok";
+        final AtomicInteger counter = new AtomicInteger(0);
+        final BlockingQueue<Boolean> completion = new ArrayBlockingQueue<>(1);
+        final ConcurrentMap<String, Object> result = new ConcurrentHashMap<>();
+        LambdaFunction f = (headers, input, instance) -> {
+            String myRoute = headers.get(MY_ROUTE);
+            result.put(myRoute, input);
+            if (counter.incrementAndGet() == 2) {
+                completion.offer(true);
+            }
+            return true;
+        };
+        Platform.initialize();
+        Platform platform = Platform.INSTANCE;
+        final BlockingQueue<Boolean> bench = new ArrayBlockingQueue<>(1);
+        platform.waitForProviders(Collections.singletonList("v1.hello.world"), 5).onSuccess(bench::offer);
+        boolean available = Boolean.TRUE.equals(bench.poll(5, TimeUnit.SECONDS));
+        Assert.assertTrue(available);
+        for (String t: targets) {
+            platform.register(t, f, true, 1);
+        }
+        // Event targeted to v1.hello.world will be multicasted to v1.hello.service.1 and v1.hello.service.2
+        po.send("v1.hello.world", TEXT);
+        completion.poll(5, TimeUnit.SECONDS);
+        Assert.assertEquals(2, result.size());
+        for (Map.Entry<String, Object> kv: result.entrySet()) {
+            Assert.assertEquals(TEXT, kv.getValue());
+            log.info("Result from {} is correct", kv.getKey());
+        }
+    }
+
+====================================================================================================
+PHASE 3: Removing Comments
+====================================================================================================
+  Calling Ollama for: comment removal
+    Prompt length: 1862 chars
+    Attempt 1/3
+    ✓ Response received: 1559 chars
+    Extracting code from response
+      Removed ```java``` markers
+      Extracted code: 1547 chars
+  ✓ Comments removed
+    Original size: 1656 chars
+    Cleaned size: 1547 chars
+
+====================================================================================================
+INLINING COMPLETE
+====================================================================================================
+  ✓ Success
+  Original size: 1612 chars
+  Final size: 1547 chars
