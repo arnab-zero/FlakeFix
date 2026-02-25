@@ -1,0 +1,110 @@
+**A) Identified async boundary**  
+The flaky test `MulticastTest.routingTest` invokes the asynchronous `Platform.waitForProvider(...)` method.  
+The test waits on a `BlockingQueue` (`bench`) that is populated by the `onSuccess` callback of the future returned by `waitForProvider`.  
+To guarantee deterministic completion, we add a completion flag to `Platform` and make the test wait on that flag instead of the queue.
+
+---
+
+**B) Patch Plan**
+
+| File | Class | Method | Insertion Anchor | Insertion Line | Code to Insert |
+|------|-------|--------|------------------|-----------------|----------------|
+| `C:\\Downloads\\mercury-main\\system\\platform-core\\src\\main\\java\\org\\platformlambda\\core\\system\\Platform.java` | `Platform` | *class body* | After `public class Platform {` | 2 | `private static volatile boolean hasCompleted;` |
+| `C:\\Downloads\\mercury-main\\system\\platform-core\\src\\main\\java\\org\\platformlambda\\core\\system\\Platform.java` | `Platform` | *class body* | After `getEventExecutor()` method (line 162) | 163 | `public static void reset() { hasCompleted = false; }`<br>`public static boolean getCompletedStatus() { return hasCompleted; }` |
+| `C:\\Downloads\\mercury-main\\system\\platform-core\\src\\main\\java\\org\\platformlambda\\core\\system\\Platform.java` | `Platform` | `waitForProviders` | After `getEventExecutor().submit(() -> promise.complete(true));` (line 720) | 720 | `hasCompleted = true;` |
+| `C:\\Downloads\\mercury-main\\system\\platform-core\\src\\test\\java\\org\\platformlambda\\core\\MulticastTest.java` | `MulticastTest` | `routingTest` | Before `platform.waitForProvider("v1.hello.world", 5).onSuccess(bench::offer);` (line 70) | 70 | `Platform.reset();` |
+| `C:\\Downloads\\mercury-main\\system\\platform-core\\src\\test\\java\\org\\platformlambda\\core\\MulticastTest.java` | `MulticastTest` | `routingTest` | Immediately after the async call (line 71) | 71 | `while (!Platform.getCompletedStatus()) { Thread.yield(); }` |
+
+---
+
+**C) Code Patches (edited snippets)**  
+
+*Platform.java – added field and test‑only methods*  
+
+```java
+public class Platform {
+
+    // ... existing imports and code ...
+
+    private static volatile boolean hasCompleted;
+
+    // test‑only
+    public static void reset() { hasCompleted = false; }
+
+    // test‑only
+    public static boolean getCompletedStatus() { return hasCompleted; }
+
+    // ... existing methods ...
+
+    public ExecutorService getEventExecutor() {
+        return executor;
+    }
+
+    // ... existing methods ...
+
+    public Future<Boolean> waitForProviders(List<String> providers, int seconds) {
+        return Future.future(promise -> {
+            if (hasRoute(providers)) {
+                getEventExecutor().submit(() -> {
+                    promise.complete(true);
+                    hasCompleted = true;   // <-- added
+                });
+            } else {
+                getVertx().setTimer(2000, t ->
+                        waitForProviders(promise, providers, 0, Math.max(2, seconds) / 2));
+            }
+        });
+    }
+
+    // ... rest of the class ...
+}
+```
+
+*MulticastTest.java – added reset call and yield loop*  
+
+```java
+public void routingTest() throws IOException, InterruptedException {
+    final EventEmitter po = EventEmitter.getInstance();
+    final String[] targets = {"v1.hello.service.1", "v1.hello.service.2"};
+    final String TEXT = "ok";
+    final AtomicInteger counter = new AtomicInteger(0);
+    final BlockingQueue<Boolean> completion = new ArrayBlockingQueue<>(1);
+    final ConcurrentMap<String, Object> result = new ConcurrentHashMap<>();
+    LambdaFunction f = (headers, input, instance) -> {
+        String myRoute = headers.get(MY_ROUTE);
+        result.put(myRoute, input);
+        if (counter.incrementAndGet() == 2) {
+            completion.offer(true);
+        }
+        return true;
+    };
+    Platform platform = Platform.getInstance();
+    final BlockingQueue<Boolean> bench = new ArrayBlockingQueue<>(1);
+
+    Platform.reset();   // <-- added
+    platform.waitForProvider("v1.hello.world", 5).onSuccess(bench::offer);
+    while (!Platform.getCompletedStatus()) { Thread.yield(); }   // <-- added
+
+    boolean available = Boolean.TRUE.equals(bench.poll(5, TimeUnit.SECONDS));
+    Assert.assertTrue(available);
+    for (String t: targets) {
+        platform.registerPrivate(t, f, 1);
+    }
+    // Event targeted to v1.hello.world will be multicasted to v1.hello.service.1 and v1.hello.service.2
+    po.send("v1.hello.world", TEXT);
+    completion.poll(5, TimeUnit.SECONDS);
+    Assert.assertEquals(2, result.size());
+    for (Map.Entry<String, Object> kv: result.entrySet()) {
+        Assert.assertEquals(TEXT, kv.getValue());
+        log.info("Result from {} is correct", kv.getKey());
+    }
+}
+```
+
+These patches add a completion flag to `Platform`, set it when the asynchronous `waitForProvider` future completes, and make the test wait on that flag immediately after invoking the async method. This guarantees that the test proceeds only after the asynchronous work has finished, eliminating flakiness.
+
+
+
+
+
+

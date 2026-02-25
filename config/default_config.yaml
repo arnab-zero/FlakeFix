@@ -1,0 +1,34 @@
+# Default Configuration for Flaky Test Detection and Repair System
+
+# Model configuration
+model:
+  checkpoint_path: "flakyXbert_augExp1.pth"
+  device: "cuda" # Options: "cuda", "cpu", "auto"
+  embedding_cache_path: "train_embeddings.pt"
+
+# LLM API configuration
+llm:
+  provider: "gemini" # Options: "gemini", "openai", "anthropic"
+  api_key: "AIzaSyCW8EbIYPATZnwjIl7UtuIJlXHyWY8fPSI"
+  temperature: 0.2 # Range: 0.0 - 1.0 (lower = more deterministic)
+  max_retries: 3 # Maximum number of retry attempts for API calls
+
+# Analysis configuration
+analysis:
+  interprocedural_depth: 3 # Maximum depth for method call analysis
+  confidence_threshold: 0.7 # Minimum confidence for flakiness detection
+  parallel_processing: true # Enable parallel processing for multiple files
+  max_workers: 4 # Number of parallel workers
+
+# Output configuration
+output:
+  directory: "output" # Output directory for reports and patches
+  generate_json: true # Generate JSON reports
+  generate_text: true # Generate human-readable text reports
+  generate_patches: true # Generate patch files
+
+# Logging configuration
+logging:
+  level: "INFO" # Options: "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"
+  file: "flaky_detector.log" # Log file path (null to disable file logging)
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"

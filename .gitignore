@@ -1,0 +1,75 @@
+# Kiro
+.kiro/
+
+# Markdown files
+*.md
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+*.egg-info/
+dist/
+build/
+
+# Environment variables
+.env
+backend/.env
+
+# Node.js / Frontend
+node_modules/
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Output directories
+output/
+embeddings/
+models/
+*.pt
+*.pth
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+inliner_log.txt
+llm_based_inliner/inliner_log.txt
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# Test outputs
+llm_based_inliner/output/
+patch_generation/output/
+patch_generation/test_output/
+patch_generation/debug_test/
+patch_generation/final_test/
+
+# Large data files
+*.csv
+*.png
+*.jpg
+*.jpeg
+
+# Cloned repositories (temporary storage)
+# Note: Keep this in .gitignore as these are temporary analysis repos
